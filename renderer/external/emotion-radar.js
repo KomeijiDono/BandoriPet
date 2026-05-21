@@ -1,0 +1,48 @@
+/**
+ * emotion-radar.js — 情绪雷达 WebSocket
+ * 连接 ws://localhost:8765 监听情绪事件，触发语音播报
+ * 从 index.html 内联脚本抽离
+ */
+(function () {
+  'use strict';
+
+  var isRadarActive = false;
+
+  function connectEmotionRadar() {
+    var radarSocket = new WebSocket('ws://localhost:8765');
+    radarSocket.onopen = function () {
+      console.log("情绪雷达对接成功");
+    };
+    radarSocket.onmessage = function (event) {
+      var data = JSON.parse(event.data);
+      if (isRadarActive) return;
+
+      var voiceLines = [
+        { text: "[surprise] 哇！打个游戏而已，别这么大火气嘛！", lang: "zh" },
+        { text: "[sad] 又在口吐芬芳了……别气别气，深呼吸！", lang: "zh" },
+        { text: "[angry] 键盘要被你敲坏啦！温柔一点！", lang: "zh" }
+      ];
+      var randomLine = voiceLines[Math.floor(Math.random() * voiceLines.length)];
+      if (data.type === 'rage_audio' || data.type === 'rage_apm') {
+        console.log("");
+        isRadarActive = true;
+        // 以下函数来自全局作用域，后续迁移到 chat/tts 模块后会通过 EventBus 调用
+        var emotionTags = typeof extractEmotionTags === 'function' ? extractEmotionTags(randomLine.text) : [];
+        var cleanText = randomLine.text.replace(/(?:\[|【)[a-zA-Z0-9_\.]+(?:\]|】)/g, '');
+        if (typeof addChatMessage === 'function') addChatMessage(cleanText, 'ai');
+        if (typeof playSoVitsAudio === 'function') playSoVitsAudio(cleanText, randomLine.lang, null, emotionTags);
+        setTimeout(function () {
+          isRadarActive = false;
+          console.log("进行下一次监听");
+        }, 10000);
+      }
+    };
+    radarSocket.onclose = function () {
+      setTimeout(connectEmotionRadar, 10000);
+    };
+  }
+
+  connectEmotionRadar();
+
+  console.log('[Renderer] emotion-radar.js 已就绪');
+})();

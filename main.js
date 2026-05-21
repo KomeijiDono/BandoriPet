@@ -1,5 +1,5 @@
 const Matter = require('matter-js');
-const { Engine, World, Bodies, Runner } = Matter;
+const { Engine, World, Bodies } = Matter;
 const fs = require('fs');
 const path = require('path');
 const { exec, spawn } = require('child_process');
@@ -325,6 +325,11 @@ function startSoVITS(charId) {
         });
         sovitsProcess.stdout.on('data', (data) => console.log(`[SoVITS] ${data}`));
         sovitsProcess.stderr.on('data', (data) => console.log(`[SoVITS 状态] ${data}`));
+        sovitsProcess.on('error', (err) => console.error(`[SoVITS 错误]`, err));
+        sovitsProcess.on('close', (code) => {
+            console.log(`[SoVITS] 进程退出 (code: ${code})`);
+            sovitsProcess = null;
+        });
     } catch (e) {
         console.error("唤醒语音引擎失败:", e);
     }
@@ -353,6 +358,7 @@ app.whenReady().then(() => {
 
         radarProcess.stdout.on('data', (data) => console.log(`[情绪雷达]: ${data.toString().trim()}`));
         radarProcess.stderr.on('data', (data) => console.error(`[报错]: ${data.toString().trim()}`));
+        radarProcess.on('close', () => { radarProcess = null; });
     } else {
         console.log("未找到 emotion_radar.py");
     }
@@ -503,6 +509,10 @@ ipcMain.on('toggle-cpp-audio', (event, enable) => {
         });
 
         audioProcess.on('error', (err) => console.error("启动失败:", err));
+        audioProcess.on('close', (code) => {
+            console.log(`[音频采集] 进程退出 (code: ${code})`);
+            audioProcess = null;
+        });
         
     } else if (!enable && audioProcess) {
         audioProcess.kill();
@@ -535,7 +545,6 @@ app.on('will-quit', () => {
     }
 });
 
-const { Engine, World, Bodies, Runner } = require('matter-js');
 const physicsItemsDir = path.join(__dirname, 'physics_items');
 if (!fs.existsSync(physicsItemsDir)) {
     fs.mkdirSync(physicsItemsDir, { recursive: true });
@@ -565,7 +574,6 @@ function startPhysicsLoop(fps) {
         if (draggingItemId) {
             const item = physicalItems.find(i => i.id === draggingItemId);
             if (item) {
-                const { screen } = require('electron');
                 const cursor = screen.getCursorScreenPoint();
                 const targetX = cursor.x + dragOffset.x;
                 const targetY = cursor.y + dragOffset.y;
@@ -610,8 +618,7 @@ function startPhysicsLoop(fps) {
 }
 startPhysicsLoop(60);
 
-const { screen } = require('electron');
-app.whenReady().then(() => {
+{
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
     const wallOptions = { 
@@ -624,7 +631,7 @@ app.whenReady().then(() => {
     const rightWall = Bodies.rectangle(screenW + 500, screenH / 2, 1000, screenH + 2000, wallOptions);
     const ceiling = Bodies.rectangle(screenW / 2, -500, screenW + 2000, 1000, wallOptions);
     World.add(world, [ground, leftWall, rightWall, ceiling]);
-});
+}
 
 
 ipcMain.handle('get-physics-images', () => {
