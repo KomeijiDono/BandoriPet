@@ -27,7 +27,7 @@
         console.log("");
         isRadarActive = true;
         // 以下函数来自全局作用域，后续迁移到 chat/tts 模块后会通过 EventBus 调用
-        var emotionTags = typeof extractEmotionTags === 'function' ? extractEmotionTags(randomLine.text) : [];
+        var emotionTags = (typeof Live2DEmotion !== 'undefined' && Live2DEmotion.extractEmotionTags) ? Live2DEmotion.extractEmotionTags(randomLine.text) : [];
         var cleanText = randomLine.text.replace(/(?:\[|【)[a-zA-Z0-9_\.]+(?:\]|】)/g, '');
         if (typeof addChatMessage === 'function') addChatMessage(cleanText, 'ai');
         if (typeof playSoVitsAudio === 'function') playSoVitsAudio(cleanText, randomLine.lang, null, emotionTags);
