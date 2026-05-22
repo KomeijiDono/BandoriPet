@@ -162,7 +162,6 @@
 
   // ========== 挂件拖拽 ==========
   var visWidget = document.getElementById('vis-widget');
-  var isVisDragging = false, vStartX, vStartY, vInitLeft, vInitTop;
 
   function updateVisSize() {
     var w = parseInt(document.getElementById('vis-width').value);
@@ -219,36 +218,24 @@
     }
   });
 
-  visWidget.addEventListener('mousedown', function (e) {
-    if (document.getElementById('lock-widget').checked) return;
-    isVisDragging = true;
-    vStartX = e.clientX;
-    vStartY = e.clientY;
-    var rect = visWidget.getBoundingClientRect();
-    vInitLeft = rect.left;
-    vInitTop = rect.top;
-    visWidget.style.left = vInitLeft + 'px';
-    visWidget.style.top = vInitTop + 'px';
-    visWidget.style.bottom = 'auto';
-    visWidget.style.right = 'auto';
-    visWidget.style.transform = 'none';
-    visWidget.style.border = "1px solid rgba(255, 107, 129, 0.4)";
-  });
-
-  document.addEventListener('mousemove', function (e) {
-    if (!isVisDragging) return;
-    visWidget.style.left = (vInitLeft + (e.clientX - vStartX)) + 'px';
-    visWidget.style.top = (vInitTop + (e.clientY - vStartY)) + 'px';
-  });
-
-  document.addEventListener('mouseup', function () {
-    if (isVisDragging) {
-      isVisDragging = false;
-      visWidget.style.border = "none";
-      localStorage.setItem('vis_x', visWidget.style.left);
-      localStorage.setItem('vis_y', visWidget.style.top);
-    }
-  });
+  if (typeof initDraggable === 'function') {
+    initDraggable(visWidget, visWidget, {
+      lockCheck: function () { var el = document.getElementById('lock-widget'); return el && el.checked; },
+      getInitPosition: function (el) {
+        var rect = el.getBoundingClientRect();
+        el.style.left = rect.left + 'px';
+        el.style.top = rect.top + 'px';
+        el.style.bottom = 'auto';
+        el.style.right = 'auto';
+        el.style.transform = 'none';
+        return { left: rect.left, top: rect.top };
+      },
+      onStart: function (el) { el.style.border = '1px solid rgba(255, 107, 129, 0.4)'; },
+      onEnd: function (el) { el.style.border = 'none'; },
+      persistX: 'vis_x', persistY: 'vis_y',
+      dragStateRef: function (v) { window.isVisDragging = v; }
+    });
+  }
 
   // ========== 暴露到全局 ==========
   window.toggleCppAudio = toggleCppAudio;

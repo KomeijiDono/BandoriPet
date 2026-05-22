@@ -46,10 +46,17 @@
     headerEl.addEventListener('mousedown', function (e) {
       if (opts.lockCheck && opts.lockCheck()) return;
       state.isDragging = true;
+      if (opts.dragStateRef) opts.dragStateRef(true);
       state.startX = e.clientX;
       state.startY = e.clientY;
-      state.initLeft = parseInt(window.getComputedStyle(targetEl).left) || 0;
-      state.initTop = parseInt(window.getComputedStyle(targetEl).top) || 0;
+      if (opts.getInitPosition) {
+        var pos = opts.getInitPosition(targetEl);
+        state.initLeft = pos.left;
+        state.initTop = pos.top;
+      } else {
+        state.initLeft = parseInt(window.getComputedStyle(targetEl).left) || 0;
+        state.initTop = parseInt(window.getComputedStyle(targetEl).top) || 0;
+      }
       if (opts.onStart) opts.onStart(targetEl);
     });
 
@@ -62,6 +69,7 @@
     document.addEventListener('mouseup', function () {
       if (!state.isDragging) return;
       state.isDragging = false;
+      if (opts.dragStateRef) opts.dragStateRef(false);
       if (opts.onEnd) opts.onEnd(targetEl);
       if (opts.persistX) localStorage.setItem(opts.persistX, targetEl.style.left);
       if (opts.persistY) localStorage.setItem(opts.persistY, targetEl.style.top);

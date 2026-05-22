@@ -22,8 +22,8 @@
     if (phoneHeader && typeof initDraggable === 'function') {
       initDraggable(phoneHeader, smartphoneUI, {
         lockCheck: function () { return document.getElementById('lock-widget') && document.getElementById('lock-widget').checked; },
-        onStart: function (el) { el.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.3), inset 0 0 0 2px #555'; },
-        onEnd: function (el) { el.style.boxShadow = '0 15px 35px rgba(0,0,0,0.2), inset 0 0 0 2px #555'; },
+        onStart: function (el) { el.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.3), inset 0 0 0 2px #555'; window.isPhoneDragging = true; },
+        onEnd: function (el) { el.style.boxShadow = '0 15px 35px rgba(0,0,0,0.2), inset 0 0 0 2px #555'; window.isPhoneDragging = false; },
         persistX: 'phone_x',
         persistY: 'phone_y'
       });
@@ -39,8 +39,8 @@
       if (typeof initDraggable === 'function') {
         initDraggable(txtLayer, txtLayer, {
           lockCheck: function () { return document.getElementById('lock-widget') && document.getElementById('lock-widget').checked; },
-          onStart: function (el) { el.style.border = '1px dashed rgba(255, 182, 193, 0.8)'; },
-          onEnd: function (el) { el.style.border = 'none'; },
+          onStart: function (el) { el.style.border = '1px dashed rgba(255, 182, 193, 0.8)'; window.isTxtDragging = true; },
+          onEnd: function (el) { el.style.border = 'none'; window.isTxtDragging = false; },
           persistX: 'adv_txt_x',
           persistY: 'adv_txt_y'
         });

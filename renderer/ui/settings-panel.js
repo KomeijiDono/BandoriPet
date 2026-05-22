@@ -64,7 +64,7 @@
     var header = document.getElementById('settings-header');
     if (panel && header) {
       if (typeof initDraggable === 'function') {
-        initDraggable(header, panel, { onStart: function (el) { el.style.border = '2px solid #ff6b81'; }, onEnd: function (el) { el.style.border = '2px solid #ffb6c1'; } });
+        initDraggable(header, panel, { onStart: function (el) { el.style.border = '2px solid #ff6b81'; window.isSetDragging = true; }, onEnd: function (el) { el.style.border = '2px solid #ffb6c1'; window.isSetDragging = false; } });
       }
     }
   }, 100);

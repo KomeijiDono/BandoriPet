@@ -224,36 +224,22 @@
                 }, 250);
             }
         }, 50);
-        const musicWidget = document.getElementById('music-widget');
-        let isMusicDragging = false, mStartX, mStartY, mInitLeft, mInitTop;
+        var musicWidget = document.getElementById('music-widget');
 
         if (localStorage.getItem('music_widget_x')) {
             musicWidget.style.left = localStorage.getItem('music_widget_x');
             musicWidget.style.top = localStorage.getItem('music_widget_y');
         }
 
-        musicWidget.addEventListener('mousedown', (e) => {
-            if (document.getElementById('lock-widget').checked) return; 
-            isMusicDragging = true;
-            mStartX = e.clientX; mStartY = e.clientY;
-            mInitLeft = parseInt(window.getComputedStyle(musicWidget).left) || 0;
-            mInitTop = parseInt(window.getComputedStyle(musicWidget).top) || 0;
-            musicWidget.style.border = "1px solid #ff6b81"; 
-            musicWidget.style.boxShadow = "0 12px 40px rgba(0, 0, 0, 0.2)";
-        });
-        document.addEventListener('mousemove', (e) => {
-            if (!isMusicDragging) return;
-            musicWidget.style.left = `${mInitLeft + (e.clientX - mStartX)}px`;
-            musicWidget.style.top = `${mInitTop + (e.clientY - mStartY)}px`;
-        });
-        document.addEventListener('mouseup', () => {
-            if (!isMusicDragging) return;
-            isMusicDragging = false;
-            musicWidget.style.border = "1px solid rgba(255, 255, 255, 0.4)";
-            musicWidget.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.1)";
-            localStorage.setItem('music_widget_x', musicWidget.style.left);
-            localStorage.setItem('music_widget_y', musicWidget.style.top);
-        });
+        if (typeof initDraggable === 'function') {
+            initDraggable(musicWidget, musicWidget, {
+                lockCheck: function () { var el = document.getElementById('lock-widget'); return el && el.checked; },
+                onStart: function (el) { el.style.border = '1px solid #ff6b81'; el.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.2)'; },
+                onEnd: function (el) { el.style.border = '1px solid rgba(255, 255, 255, 0.4)'; el.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)'; },
+                persistX: 'music_widget_x', persistY: 'music_widget_y',
+                dragStateRef: function (v) { window.isMusicDragging = v; }
+            });
+        }
 
         function toggleMusicInfo() {
             const enable = document.getElementById('music-info-enable').checked;
@@ -400,8 +386,7 @@
             }
         }
 
-        const lyricWidget = document.getElementById('fullscreen-lyrics');
-        let isLyricDragging = false, lStartX, lStartY, lInitLeft, lInitTop;
+        var lyricWidget = document.getElementById('fullscreen-lyrics');
 
         if (localStorage.getItem('lyric_x')) {
             lyricWidget.style.left = localStorage.getItem('lyric_x');
@@ -409,7 +394,7 @@
         }
 
         function toggleLyricLock() {
-            const isLocked = document.getElementById('lock-lyric').checked;
+            var isLocked = document.getElementById('lock-lyric').checked;
             localStorage.setItem('lyric_locked', isLocked);
             if (isLocked) {
                 lyricWidget.style.pointerEvents = 'none';
@@ -419,37 +404,28 @@
             }
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const isLocked = localStorage.getItem('lyric_locked') !== 'false'; 
-            const lockBtn = document.getElementById('lock-lyric');
-            if(lockBtn) {
+        window.addEventListener('DOMContentLoaded', function () {
+            var isLocked = localStorage.getItem('lyric_locked') !== 'false';
+            var lockBtn = document.getElementById('lock-lyric');
+            if (lockBtn) {
                 lockBtn.checked = isLocked;
                 toggleLyricLock();
             }
         });
 
-        lyricWidget.addEventListener('mousedown', (e) => {
-            if (document.getElementById('lock-lyric').checked) return; 
-            isLyricDragging = true;
-            lStartX = e.clientX; 
-            lStartY = e.clientY;
-            
-            lInitLeft = parseInt(window.getComputedStyle(lyricWidget).left) || (window.innerWidth / 2);
-            lInitTop = parseInt(window.getComputedStyle(lyricWidget).top) || (window.innerHeight / 2);
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isLyricDragging) return;
-            lyricWidget.style.left = `${lInitLeft + (e.clientX - lStartX)}px`;
-            lyricWidget.style.top = `${lInitTop + (e.clientY - lStartY)}px`;
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (!isLyricDragging) return;
-            isLyricDragging = false;
-            localStorage.setItem('lyric_x', lyricWidget.style.left);
-            localStorage.setItem('lyric_y', lyricWidget.style.top);
-        });
+        if (typeof initDraggable === 'function') {
+            initDraggable(lyricWidget, lyricWidget, {
+                lockCheck: function () { var el = document.getElementById('lock-lyric'); return el && el.checked; },
+                getInitPosition: function (el) {
+                    return {
+                        left: parseInt(window.getComputedStyle(el).left) || (window.innerWidth / 2),
+                        top: parseInt(window.getComputedStyle(el).top) || (window.innerHeight / 2)
+                    };
+                },
+                persistX: 'lyric_x', persistY: 'lyric_y',
+                dragStateRef: function (v) { window.isLyricDragging = v; }
+            });
+        }
 
   window.sendMediaControl = sendMediaControl;
   window.parseLRC = parseLRC;

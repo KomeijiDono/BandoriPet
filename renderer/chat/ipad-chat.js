@@ -386,9 +386,11 @@
       },
       onStart: function (el) {
         el.style.boxShadow = "0 40px 80px rgba(0, 0, 0, 0.6), inset 0 0 0 2px #333";
+        window.isIpadDragging = true;
       },
       onEnd: function (el) {
         el.style.boxShadow = "0 30px 60px rgba(0,0,0,0.5), inset 0 0 0 2px #333";
+        window.isIpadDragging = false;
       }
     });
   }

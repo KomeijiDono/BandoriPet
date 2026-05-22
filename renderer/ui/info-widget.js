@@ -47,40 +47,16 @@
   if (widget) {
     widget.style.left = localStorage.getItem('widget_x') || '20px';
     widget.style.top = localStorage.getItem('widget_y') || '55px';
+    if (typeof initDraggable === 'function') {
+      initDraggable(widget, widget, {
+        lockCheck: function () { var el = document.getElementById('lock-widget'); return el && el.checked; },
+        onStart: function (el) { el.style.border = '1px solid #ff6b81'; el.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.2)'; },
+        onEnd: function (el) { el.style.border = '1px solid rgba(255, 255, 255, 0.4)'; el.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)'; },
+        persistX: 'widget_x', persistY: 'widget_y',
+        dragStateRef: function (v) { window.isDragging = v; }
+      });
+    }
   }
-
-  var isDragging = false, startX, startY, initialLeft, initialTop;
-
-  if (widget) {
-    widget.addEventListener('mousedown', function (e) {
-      var lockEl = document.getElementById('lock-widget');
-      if (lockEl && lockEl.checked) return;
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      initialLeft = parseInt(window.getComputedStyle(widget).left) || 0;
-      initialTop = parseInt(window.getComputedStyle(widget).top) || 0;
-      widget.style.border = "1px solid #ff6b81";
-      widget.style.boxShadow = "0 12px 40px rgba(0, 0, 0, 0.2)";
-    });
-  }
-
-  document.addEventListener('mousemove', function (e) {
-    if (!isDragging || !widget) return;
-    var dx = e.clientX - startX;
-    var dy = e.clientY - startY;
-    widget.style.left = (initialLeft + dx) + 'px';
-    widget.style.top = (initialTop + dy) + 'px';
-  });
-
-  document.addEventListener('mouseup', function () {
-    if (!isDragging || !widget) return;
-    isDragging = false;
-    widget.style.border = "1px solid rgba(255, 255, 255, 0.4)";
-    widget.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.1)";
-    localStorage.setItem('widget_x', widget.style.left);
-    localStorage.setItem('widget_y', widget.style.top);
-  });
 
   // ========== 锁 ==========
   function toggleWidgetLock() {
