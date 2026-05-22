@@ -1,0 +1,234 @@
+/**
+ * model.js — Live2D 模型加载与情绪状态管理
+ * 从 index.html 内联脚本完全抽离
+ */
+(function () {
+  'use strict';
+
+  var app, live2dModel;
+  var currentLive2dMotionNames = new Set();
+  var currentLive2dExpressionNames = new Set();
+  var currentLive2dMotionList = [];
+  var currentLive2dExpressionList = [];
+  var voiceEmotionTimers = [];
+  var lastLive2DClickAt = 0;
+  var lastLive2DClickMotionName = '';
+  var lastLive2DClickExpressionName = '';
+
+  // -- PIXI 应用初始化 --
+  try {
+    app = new PIXI.Application({
+      view: document.getElementById('canvas'), autoStart: true, resizeTo: window, backgroundAlpha: 0
+    });
+    window.app = app;
+  } catch (e) {
+    console.error('[启动] PIXI.Application 初始化失败:', e);
+    var canvas = document.getElementById('canvas');
+    if (canvas) canvas.style.display = 'none';
+  }
+
+  // ===== 情绪状态管理函数 =====
+
+  function clearVoiceEmotionTimers() {
+    voiceEmotionTimers.forEach(function (timer) { clearTimeout(timer); });
+    voiceEmotionTimers = [];
+  }
+
+  function applyLive2DEmotion(tag, charId) {
+    if (!live2dModel) return;
+    charId = charId || localStorage.getItem('current_char') || 'anon';
+    var normalized = Live2DEmotion.normalizeEmotionTag(tag) || 'normal';
+    var emotion = Live2DEmotion.MAP[normalized] || Live2DEmotion.MAP.normal;
+    var expressionName = Live2DEmotion.pickAvailableName(Live2DEmotion.expandExpressionCandidates(emotion.expressions, charId), currentLive2dExpressionNames);
+    var motionName = Live2DEmotion.pickAvailableName(emotion.motions, currentLive2dMotionNames);
+    if (expressionName) {
+      try { live2dModel.expression(expressionName); } catch (error) { console.warn('[emotion] expression failed:', expressionName, error.message); }
+    }
+    if (motionName) {
+      try { live2dModel.motion(motionName); } catch (error) { console.warn('[emotion] motion failed:', motionName, error.message); }
+    }
+  }
+
+  function applyLive2DResourcePair(expressionName, motionName) {
+    if (!live2dModel) return;
+    if (expressionName) {
+      try { live2dModel.expression(expressionName); } catch (error) { console.warn('[click-action] expression failed:', expressionName, error.message); }
+    }
+    if (motionName) {
+      try { live2dModel.motion(motionName); } catch (error) { console.warn('[click-action] motion failed:', motionName, error.message); }
+    }
+  }
+
+  function restoreLive2DNeutral(charId) {
+    clearVoiceEmotionTimers();
+    applyLive2DEmotion('normal', charId);
+  }
+
+  function startVoiceEmotionActions(tags, charId, audio) {
+    clearVoiceEmotionTimers();
+    var sequence = (Array.isArray(tags) && tags.length > 0 ? tags : ['normal']).slice(0, 3);
+    var durationMs = audio && Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration * 1000 : 0;
+    var stepMs = durationMs > 0 ? Math.max(1500, Math.min(3500, durationMs / (sequence.length + 1))) : 2600;
+    sequence.forEach(function (tag, index) {
+      var delay = index === 0 ? 0 : Math.round(stepMs * index);
+      if (delay === 0) applyLive2DEmotion(tag, charId);
+      else voiceEmotionTimers.push(setTimeout(function () { applyLive2DEmotion(tag, charId); }, delay));
+    });
+  }
+
+  function pickRandomLive2DName(names, previousName) {
+    if (!Array.isArray(names) || names.length === 0) return '';
+    if (names.length === 1) return names[0];
+    var pool = names.filter(function (name) { return name && name !== previousName; });
+    var source = pool.length > 0 ? pool : names;
+    return source[Math.floor(Math.random() * source.length)] || '';
+  }
+
+  function playLive2DClickFeedback() {
+    if (!live2dModel) return;
+    if (typeof window.modelDragMoved !== 'undefined' && window.modelDragMoved) return;
+    if (Date.now() - lastLive2DClickAt < 700) return;
+    lastLive2DClickAt = Date.now();
+    var charId = localStorage.getItem('current_char') || 'anon';
+    var maxCount = Math.max(currentLive2dMotionList.length, currentLive2dExpressionList.length);
+    if (maxCount > 0) {
+      var motionName = pickRandomLive2DName(currentLive2dMotionList, lastLive2DClickMotionName);
+      var expressionName = pickRandomLive2DName(currentLive2dExpressionList, lastLive2DClickExpressionName);
+      if (motionName) lastLive2DClickMotionName = motionName;
+      if (expressionName) lastLive2DClickExpressionName = expressionName;
+      applyLive2DResourcePair(expressionName, motionName);
+    } else {
+      applyLive2DEmotion('touch', charId);
+    }
+    clearVoiceEmotionTimers();
+    voiceEmotionTimers.push(setTimeout(function () { restoreLive2DNeutral(charId); }, 2400));
+  }
+
+  function bindLive2DInteractionFeedback() {
+    if (!live2dModel) return;
+    try { live2dModel.off('pointertap', playLive2DClickFeedback); } catch (e) {}
+    live2dModel.interactive = true;
+    live2dModel.buttonMode = true;
+    live2dModel.on('pointertap', playLive2DClickFeedback);
+  }
+
+  // ===== 模型加载 =====
+
+  async function loadCustomModel(charId, outfitId) {
+    if (typeof window.applyBgMode === 'function') window.applyBgMode();
+    if (live2dModel) {
+      app.stage.removeChild(live2dModel);
+      live2dModel.destroy();
+      live2dModel = null;
+    }
+    var titleEl = document.getElementById('app-title');
+    if (titleEl) titleEl.innerText = ' Bandori Desktop Pet';
+    try {
+      var basePath = 'model/' + charId + '/' + outfitId + '/';
+      var modelUrl = basePath + 'model.json';
+      var response = await fetch(modelUrl);
+      var modelJson = await response.json();
+      modelJson.url = modelUrl;
+
+      var charactersConfig = window.CharactersConfig;
+      var mtnFolder = charactersConfig[charId].mtnFolder;
+      var relativeMtnPath = '../../_mtn_emp/' + mtnFolder + '/';
+      var absoluteMtnPath = require('path').join(__dirname, 'model', '_mtn_emp', mtnFolder);
+      var autoMotions = {};
+      var autoExpressions = [];
+      if (require('fs').existsSync(absoluteMtnPath)) {
+        var files = require('fs').readdirSync(absoluteMtnPath);
+        files.forEach(function (file) {
+          if (file.endsWith('.mtn')) {
+            var actionName = file.replace(/[0-9]*\.mtn$/, '');
+            if (!autoMotions[actionName]) autoMotions[actionName] = [];
+            autoMotions[actionName].push({ "file": relativeMtnPath + file });
+          } else if (file.endsWith('.exp.json')) {
+            var expName = file.replace(/[0-9]*\.exp\.json$/, '');
+            autoExpressions.push({ "name": expName, "file": relativeMtnPath + file });
+          }
+        });
+      } else {
+        console.warn('找不到动作文件夹: ' + absoluteMtnPath);
+      }
+
+      modelJson.motions = Object.assign({}, modelJson.motions || {}, autoMotions);
+      var expressionByName = new Map();
+      (modelJson.expressions || []).concat(autoExpressions).forEach(function (expression) {
+        if (expression && expression.name) expressionByName.set(expression.name, expression);
+      });
+      modelJson.expressions = Array.from(expressionByName.values());
+
+      currentLive2dMotionNames = new Set(Object.keys(modelJson.motions || {}));
+      currentLive2dExpressionNames = new Set((modelJson.expressions || []).map(function (exp) { return exp.name; }).filter(Boolean));
+      currentLive2dMotionList = Array.from(currentLive2dMotionNames).sort();
+      currentLive2dExpressionList = Array.from(currentLive2dExpressionNames).sort();
+      lastLive2DClickMotionName = '';
+      lastLive2DClickExpressionName = '';
+
+      var isLookEnabled = (localStorage.getItem('mouse_follow_enabled') !== 'false');
+      live2dModel = await PIXI.live2d.Live2DModel.from(modelJson, {
+        basePath: basePath,
+        autoInteract: isLookEnabled
+      });
+      app.stage.addChild(live2dModel);
+      window.live2dPet = live2dModel;
+      live2dModel.scale.set(parseFloat(localStorage.getItem('anon_scale')) || 0.2);
+      live2dModel.x = parseFloat(localStorage.getItem('anon_x')) || 0;
+      live2dModel.y = parseFloat(localStorage.getItem('anon_y')) || 0;
+
+      bindLive2DInteractionFeedback();
+
+      var isDragEnabled = (localStorage.getItem('model_drag_enabled') === 'true');
+      var dragToggle = document.getElementById('menu-set-drag');
+      if (dragToggle) dragToggle.checked = isDragEnabled;
+      if (isDragEnabled && typeof window.toggleModelDrag === 'function') {
+        window.toggleModelDrag(true);
+      }
+    } catch (error) {
+      console.error("加载模型失败，请检查文件夹名称是否正确对应：", error);
+      if (typeof window.addChatMessage === 'function') {
+        window.addChatMessage("加载失败了！请检查 model 文件夹名称是否正确哦！", 'ai');
+      }
+    }
+    setTimeout(function () {
+      if (window.live2dPet) {
+        window.live2dPet.updateTransform();
+        if (typeof window.syncUIPhysics === 'function') window.syncUIPhysics();
+      }
+    }, 150);
+  }
+
+  // ===== 初始化加载首个模型 =====
+  setTimeout(function () {
+    try {
+      var charactersConfig = window.CharactersConfig;
+      var initChar = localStorage.getItem('current_char');
+      if (!charactersConfig || !charactersConfig[initChar]) {
+        initChar = (charactersConfig && Object.keys(charactersConfig)[0]) || 'kasumi';
+      }
+      var initOutfit = localStorage.getItem('outfit_' + initChar);
+      if (!charactersConfig || !charactersConfig[initChar] || !charactersConfig[initChar].outfits[initOutfit]) {
+        var outfits = charactersConfig && charactersConfig[initChar] && charactersConfig[initChar].outfits;
+        initOutfit = (outfits && Object.keys(outfits)[0]) || 'live_default';
+      }
+      loadCustomModel(initChar, initOutfit);
+      if (typeof window.BandoriIPC !== 'undefined') {
+        window.BandoriIPC.send('switch-character', initChar);
+      }
+    } catch (e) {
+      console.error('[启动] 角色加载失败:', e);
+    }
+  }, 0);
+
+  // ===== 暴露 API =====
+  window.loadCustomModel = loadCustomModel;
+  window.restoreLive2DNeutral = restoreLive2DNeutral;
+  window.startVoiceEmotionActions = startVoiceEmotionActions;
+  window.applyLive2DEmotion = applyLive2DEmotion;
+  window.clearVoiceEmotionTimers = clearVoiceEmotionTimers;
+  window.bindLive2DInteractionFeedback = bindLive2DInteractionFeedback;
+  window.playLive2DClickFeedback = playLive2DClickFeedback;
+
+  console.log('[Renderer] model.js 已就绪');
+})();
