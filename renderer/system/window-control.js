@@ -106,12 +106,15 @@
       }
     }
 
-    if (shouldIgnore && window.live2dModel) {
-      var bounds = window.live2dModel.getBounds();
-      var padding = 20;
-      if (e.clientX >= (bounds.x - padding) && e.clientX <= (bounds.x + bounds.width + padding) &&
-          e.clientY >= (bounds.y - padding) && e.clientY <= (bounds.y + bounds.height + padding)) {
-        shouldIgnore = false;
+    if (shouldIgnore && window.live2dPet) {
+      var dragEnabled = localStorage.getItem('model_drag_enabled') === 'true';
+      if (dragEnabled) {
+        var bounds = window.live2dPet.getBounds();
+        var padding = 20;
+        if (e.clientX >= (bounds.x - padding) && e.clientX <= (bounds.x + bounds.width + padding) &&
+            e.clientY >= (bounds.y - padding) && e.clientY <= (bounds.y + bounds.height + padding)) {
+          shouldIgnore = false;
+        }
       }
     }
 

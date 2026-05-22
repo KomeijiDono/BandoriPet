@@ -120,6 +120,7 @@
       app.stage.removeChild(live2dModel);
       live2dModel.destroy();
       live2dModel = null;
+      window.live2dPet = null;
     }
     var titleEl = document.getElementById('app-title');
     if (titleEl) titleEl.innerText = ' Bandori Desktop Pet';

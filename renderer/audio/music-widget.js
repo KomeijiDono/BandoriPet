@@ -316,9 +316,10 @@
             const lastChar = cleanText.slice(-1);
             if (!['。', '！', '？', '!', '?', '…', '.'].includes(lastChar)) cleanText += safeDot; 
 
-            if (typeof live2dModel !== 'undefined' && live2dModel) {
-                if (!live2dModel.customLipSyncInjected) {
-                    live2dModel.internalModel.on('beforeModelUpdate', function() {
+            var lipModel = window.live2dPet || (typeof live2dModel !== 'undefined' ? live2dModel : null);
+            if (lipModel) {
+                if (!lipModel.customLipSyncInjected) {
+                    lipModel.internalModel.on('beforeModelUpdate', function() {
                         let coreModel = this.coreModel;
                         if (coreModel && isFakeSpeaking) {
                             let mouthOpen = (Math.sin(Date.now() / 80) * 0.5 + 0.5) * (Math.random() * 0.5 + 0.5);
@@ -340,7 +341,7 @@
                             wasFakeSpeaking = false; 
                         }
                     });
-                    live2dModel.customLipSyncInjected = true; 
+                    lipModel.customLipSyncInjected = true; 
                 }
             }
             const charName = charactersConfig[charId] ? charactersConfig[charId].name : charId;
