@@ -1,59 +1,117 @@
-# ELECTRON-GSV-BandoriPet
-基于ELECTRON架构开发的BanG Dream 桌宠程序。该项目完全开源，可用于进行后续开发以及参考。（不包含GSV运行库）
-## Features
-- Node 模块整合
-- Electron API 调用
-- 系统脚本调度
-- 子进程管理
-- IPC 通信
-- Live2D 渲染
-- GSV 语音交互
-- 桌面功能整合
-## Requirements
+# BandoriPet — BanG Dream 桌宠
+
+基于 Electron 28 的 BanG Dream 桌面宠物，支持 Live2D 渲染、GSV 语音交互、AI 聊天、物理道具。
+
+> **📌 重构说明**：本仓库是基于 [ELECTRON-GSV-BandoriPet](https://github.com/Anokianx/ELECTRON-GSV-BandoriPet) 的重构版本。感谢原作者 [@Anokianx](https://github.com/Anokianx) 的开源贡献。
+
+## 功能特性
+
+- **Live2D 渲染** — PixiJS v6 + pixi-live2d-display 0.4.0
+- **角色切换** — Live2d角色，自定义服装
+- **GSV 语音** — GPT-SoVITS 本地 TTS，口型同步
+- **AI 聊天** — 支持 Gemini / DeepSeek / OpenAI / Qwen，可自行配置
+- **iPad 群聊** — 多角色群组对话
+- **物理道具** — Matter.js 物理模拟，可拖拽、切换形状
+- **音频可视化** — 64 位 FFT 频谱
+- **音乐组件** — 歌词同步、封面显示
+- **天气显示** — IP 定位 + Open-Meteo API
+- **鼠标穿透** — 拖拽时自动禁用穿透
+
+## 系统要求
+
 - Windows 10/11
-- Electron 20+
 - Node.js 16+
 - Python 3.10+
 - C++ Runtime
 - MSVC Runtime
 - Visual Studio Build Tools
-- GPT-SoVITS（GSV）
-## Notes
-准备工作：
+- `GPT-SoVITS`（可选，用于 GSV 语音）
 
-在下载仓库文件后在文件夹路径内自行配置nodejs：`npm install`
+## 目录结构
 
-新建model文件夹。在model文件夹内按照前端源码里`charactersConfig`常量内角色名（可修改但必须一致），新建每一个角色的模型文件夹,里面放置衣服建模文件夹（推荐Bestdori上去提取）。
-例：`model/anon`
+```
+BandoriPet/
+├── main.js              # 主进程编排
+├── voice-config.js      # 30 角色 GSV 路径
+├── sovits-manager.js    # GSV 语音引擎管理
+├── physics-engine.js    # Matter.js 物理引擎
+├── audio-capture.js     # 系统音频采集 FFT
+├── tray-menu.js         # 托盘菜单
+├── window-controls.js   # 窗口控制 IPC
+├── media-control.js     # 媒体键模拟
+├── global-shortcut.js   # 全局快捷键
+├── media_worker.js      # 媒体监听 Worker
+├── index.html           # 渲染入口
+├── styles/main.css      # 全量 CSS
+├── renderer/
+│   ├── core/            # state / ipc / events / drag-helper
+│   ├── live2d/          # emotion / model
+│   ├── chat/            # chat-api / ipad-chat
+│   ├── ui/              # 角色菜单 / 设置 / 手机 / 物理面板
+│   ├── audio/           # 可视化 / 音乐组件
+│   ├── background/      # 粒子 / 鼠标拖尾 / 背景
+│   ├── external/        # 天气 / 情绪雷达
+│   ├── system/          # 窗口控制 / 显示设置 / 更新通知
+│   └── data/            # 角色配置数据
+├── model/               # Live2D 模型（手动创建）
+├── GPT-SoVITS/          # GSV 运行库（可选）
+└── physics_items/       # 物理道具图片（使用后自动创建）
+```
 
-新建`model/_mtn_emp`文件夹。和上面一样的方法，然后把角色的动作表情放在里面（推荐Bestdori上去提取）。
-例：`model/_mtn_emp/anon`
+## 快速开始
 
-新建`GPT-SoVITS`文件夹（如果你需要的话。然后下面是建议的GSV使用方式）。
+```bash
+cd BandoriPet
+npm install
+npm start          # 启动
+npm run build      # 打包 → dist/
+```
 
-如果你要继续使用GSV的TTS，建议的方案：
+## 手动配置
 
-①在项目文件夹`GPT-SoVITS`自行添加你自己的GSV运行库。
+### AI 聊天 API
 
-配置角色的语音模型：在主源码开头的`voiceConfigs`常量里修改相对路径（注意此时你修改的路径必须和任何角色的模型文件路径相符）
+API配置在 `renderer/chat/chat-api.js`和`renderer/chat/ipad-chat.js`中的：
 
-例：模型路径：`GPT-SoVITS\GPT_weights_v2ProPlus\XXX.CKPT`
-    主源码相对路径：`GPT-SoVITS\GPT_weights_v2ProPlus\XXX.CKPT`
-    步数文件以及参考音频同上。
-    
-②修改GSV运行路径。
+```js
+var apiConfigs = {
+  "gemini": { url: "...", key: "你的密钥", model: "模型名" },
+  ......
+};
+```
 
-在主源码`startsovits`函数内，找到`sovitsDir`常量，把=之后的路径改为你的GSV运行库的绝对路径。
+### Live2D 模型
 
-目前本程序的GSV运行效果尚有改进空间，可以自己试着优化。
-作者完全支持并且鼓励任何开发者在此基础上进行的自主开发或者借鉴。
+```
+model/
+  {角色名}/              # 如 anon/
+    {服装名}/            # 如 live_default/
+      model.json         # Live2D 模型文件
+  _mtn_emp/
+    {角色名}/            # 动作表情文件
+```
 
-联系方式：
-Discord:`https://discord.gg/YEaU3Fzq`
+角色名需与 `renderer/data/characters-config.js` 中的一致。
 
-Telegram:`@caEloP`
+### GPT-SoVITS 语音
 
-QQ:`827677473`
+1. 将 GSV 运行库放入 `GPT-SoVITS/`
+2. `voice-config.js` 中修改各角色模型路径（相对于 `GPT-SoVITS/`）
 
-Email:`caeloaukn@gmail.com/epta827677473@gmail.com`
-    
+两者需单独设置。
+
+## 技术栈
+
+| 层 | 技术 |
+|----|------|
+| 框架 | Electron 28 |
+| 渲染 | PixiJS 6.5.2 + pixi-live2d-display |
+| 物理 | Matter.js 0.20 |
+| 语音 | GPT-SoVITS（Python 子进程） |
+| 音频 | sys_audio.exe（C++） |
+| 媒体 | windows-smtc-monitor |
+
+## 联系方式
+
+- Email: `564449138@qq.com`或`rogescn@icloud.com`
+- QQ: `564449138`
