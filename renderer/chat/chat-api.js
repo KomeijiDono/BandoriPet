@@ -170,8 +170,8 @@
       chatMemory.pop();
       var model = window.live2dPet || window.live2dModel;
       if (model) {
-        try { model.motion("cry"); model.expression("cry"); } catch (e) {}
-        setTimeout(function () { try { model.expression("default"); } catch (e) {} }, 3000);
+        try { model.motion("cry"); model.expression("cry"); } catch (e) { console.warn('[聊天] 模型动画失败:', e.message); }
+        setTimeout(function () { try { model.expression("default"); } catch (e) { console.warn('[聊天] 模型还原失败:', e.message); } }, 3000);
       }
     }
   }

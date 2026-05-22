@@ -51,9 +51,9 @@
 
     var model = window.live2dPet || window.live2dModel;
     if (model) {
-      try { model.motion("wink"); model.expression("wink"); } catch (e) {}
+      try { model.motion("wink"); model.expression("wink"); } catch (e) { console.warn('[设置] 模型动画失败:', e.message); }
       setTimeout(function () {
-        try { model.expression("default"); } catch (e) {}
+        try { model.expression("default"); } catch (e) { console.warn('[设置] 模型还原失败:', e.message); }
       }, 3000);
     }
   }

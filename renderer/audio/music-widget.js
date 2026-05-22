@@ -120,7 +120,7 @@
                             }
                         }
                     }
-                } catch (e) {}
+                } catch (e) { console.warn('[歌词] 获取失败:', e.message); }
 
                 if (!foundLyric) {
                     try {
@@ -134,7 +134,7 @@
                         if (matchLyric) {
                             foundLyric = matchLyric.syncedLyrics;
                         }
-                    } catch (e) {}
+                } catch (e) { console.warn('[歌词] 网易云搜索失败:', e.message); }
                 }
             }
 
@@ -152,7 +152,7 @@
                             coverFound = true;
                         }
                     }
-                } catch(e) {}
+                } catch(e) { console.warn('[歌词] 获取失败:', e.message); }
             }
 
             if (currentSongKey !== songKey) return;

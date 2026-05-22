@@ -24,7 +24,7 @@
       if (fs.existsSync(configPath)) {
         useGPU = JSON.parse(fs.readFileSync(configPath)).useGPU !== false;
       }
-    } catch (e) {}
+    } catch (e) { console.warn('[显示设置] GPU 配置读取失败:', e.message); }
     var el = document.getElementById('hw-accel');
     if (el) el.checked = useGPU;
   }
