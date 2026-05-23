@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
-    <link href="styles/main.css" rel="stylesheet">
+    <link href="assets/styles/main.css" rel="stylesheet">
 </head>
 <body>
     <div id="splash-screen">
@@ -125,7 +125,7 @@
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.543 10.457c0-4.348-4.275-7.886-9.543-7.886-5.264 0-9.543 3.538-9.543 7.886 0 3.901 3.447 7.168 8.106 7.788.315.068.745.209.855.479.098.244.065.629.032.877l-.138.83c-.042.245-.195.958.84.417 1.036-.436 5.586-3.287 7.621-5.629 1.405-1.541 2.078-3.327 2.078-4.762z"/></svg>
         </button>
         <button class="ctrl-btn" id="char-switch-btn" title="切换角色与服装" onclick="toggleCharMenu()">
-            <img src="avatar.png" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; pointer-events: none;">
+            <img src="assets/avatar.png" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; pointer-events: none;">
         </button>
         <button class="ctrl-btn" id="settings-btn" title="控制台" onclick="toggleSettings()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -829,7 +829,7 @@
         }
 
         // ---- UI点击音效：uiClickSound + click 事件监听
-        const uiClickSound = new Audio('click.mp3'); 
+        const uiClickSound = new Audio('assets/click.mp3'); 
         uiClickSound.volume = 0.9; 
 
         document.addEventListener('click', (e) => {

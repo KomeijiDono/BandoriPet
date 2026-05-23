@@ -7,9 +7,9 @@ const Matter = require('matter-js');
 const { Engine, World, Bodies } = Matter;
 
 // initPhysics 依赖注入：接收 BrowserWindow、IPC、screen、fs、path 等主进程模块
-function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win }) {
+function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win, ROOT }) {
     // ---- 物理道具图片目录 ----
-    const physicsItemsDir = path.join(__dirname, 'physics_items');
+    const physicsItemsDir = path.join(ROOT, 'physics_items');
     if (!fs.existsSync(physicsItemsDir)) {
         fs.mkdirSync(physicsItemsDir, { recursive: true });
     }

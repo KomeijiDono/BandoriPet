@@ -31,31 +31,39 @@
 
 ```
 BandoriPet/
-├── main.js              # 主进程编排
-├── voice-config.js      # 30 角色 GSV 路径
-├── sovits-manager.js    # GSV 语音引擎管理
-├── physics-engine.js    # Matter.js 物理引擎
-├── audio-capture.js     # 系统音频采集 FFT
-├── tray-menu.js         # 托盘菜单
-├── window-controls.js   # 窗口控制 IPC
-├── media-control.js     # 媒体键模拟
-├── global-shortcut.js   # 全局快捷键
-├── media_worker.js      # 媒体监听 Worker
-├── index.html           # 渲染入口
-├── styles/main.css      # 全量 CSS
-├── renderer/
-│   ├── core/            # state / ipc / events / drag-helper
-│   ├── live2d/          # emotion / model
-│   ├── chat/            # chat-api / ipad-chat
-│   ├── ui/              # 角色菜单 / 设置 / 手机 / 物理面板
-│   ├── audio/           # 可视化 / 音乐组件
-│   ├── background/      # 粒子 / 鼠标拖尾 / 背景
-│   ├── external/        # 天气 / 情绪雷达
-│   ├── system/          # 窗口控制 / 显示设置 / 更新通知
-│   └── data/            # 角色配置数据
-├── model/               # Live2D 模型（手动创建）
-├── GPT-SoVITS/          # GSV 运行库（可选）
-└── physics_items/       # 物理道具图片（使用后自动创建）
+├── src/                       ← 主进程源码
+│   ├── main.js                # 模块编排层
+│   ├── voice-config.js        # 角色GSV模型路径
+│   ├── sovits-manager.js      # GSV语音引擎管理
+│   ├── physics-engine.js      # Matter.js物理引擎
+│   ├── audio-capture.js       # 系统音频采集FFT
+│   ├── tray-menu.js           # 托盘菜单
+│   ├── window-controls.js     # 窗口控制IPC
+│   ├── media-control.js       # 媒体键模拟
+│   ├── global-shortcut.js     # 全局快捷键
+│   └── media_worker.js        # 媒体监听Worker
+├── renderer/                  ← 渲染进程
+│   ├── core/                  # state / ipc / events / drag-helper
+│   ├── live2d/                # emotion / model
+│   ├── chat/                  # chat-api / ipad-chat
+│   ├── ui/                    # 角色菜单 / 设置 / 手机 / 物理面板
+│   ├── audio/                 # 可视化 / 音乐组件
+│   ├── background/            # 粒子 / 鼠标拖尾 / 背景
+│   ├── external/              # 天气 / 情绪雷达
+│   ├── system/                # 窗口控制 / 显示设置 / 更新通知
+│   └── data/                  # 角色配置数据
+├── assets/                    ← 静态资源
+│   ├── icon.ico
+│   ├── avatar.png
+│   ├── click.mp3
+│   └── styles/main.css
+├── native/                    ← C++原生文件
+│   ├── sys_audio.exe/.cpp/.obj
+│   └── set_wallpaper.cpp
+├── index.html                 ← 渲染入口
+├── model/                     ← Live2D模型（手动创建）
+├── GPT-SoVITS/                ← GSV运行库（可选）
+└── physics_items/             ← 物理道具图片（自动创建）
 ```
 
 ## 快速开始
@@ -96,7 +104,7 @@ model/
 ### GPT-SoVITS 语音
 
 1. 将 GSV 运行库放入 `GPT-SoVITS/`
-2. `voice-config.js` 中修改各角色模型路径（相对于 `GPT-SoVITS/`）
+2. `src/voice-config.js` 中修改各角色模型路径（相对于 `GPT-SoVITS/`）
 
 两者需单独设置。
 
@@ -110,6 +118,28 @@ model/
 | 语音 | GPT-SoVITS（Python 子进程） |
 | 音频 | sys_audio.exe（C++） |
 | 媒体 | windows-smtc-monitor |
+
+## 开发
+
+项目无构建工具（webpack/vite），渲染进程通过 CDN 加载 PixiJS/Live2D SDK。主进程模块使用依赖注入模式（`initXxx({ ipcMain, win, ... })`），渲染模块使用 IIFE 通过 `window.*` 暴露 API。
+
+```bash
+# 快速语法检查
+node -c src/main.js
+for f in src/*.js renderer/**/*.js; do node -c "$f"; done
+
+# 开启开发者工具（临时，调试用）
+# 在 src/main.js 的 win.once('ready-to-show', ...) 中加：
+#   win.webContents.openDevTools();
+```
+
+### 核心约定
+
+- **nodeIntegration: true, contextIsolation: false** — renderer 可直接 `require('electron')`
+- **依赖注入**：主进程模块接收 `{ ipcMain, win, ... }`，返回 `{ getProcess, killProcess }` 接口
+- **IIFE 模式**：渲染模块使用 `(function () { 'use strict'; ... })()` 包裹，通过 `window.x = fn` 暴露
+- **统一拖拽**：`initDraggable(el, target, opts)` 替代所有手写拖拽，支持 `lockCheck`/`dragStateRef`/`persistX`/`persistY`/`getInitPosition`
+- **PixiJS v6 无 Canvas2D 回退**：`new PIXI.Application()` 在 WebGL 不可用时同步抛异常
 
 ## 联系方式
 

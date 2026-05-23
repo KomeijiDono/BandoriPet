@@ -2,11 +2,10 @@
 // deps: { ipcMain, spawn, fs, path, __dirname, win } → 返回 { getProcess, killProcess }
 let audioProcess = null;
 
-function initAudioCapture({ ipcMain, spawn, fs, path, __dirname, win }) {
+function initAudioCapture({ ipcMain, spawn, fs, path, __dirname, win, ROOT }) {
     ipcMain.on('toggle-cpp-audio', (event, enable) => {
         if (enable && !audioProcess) {
-            // 计算 exe 路径：asar 包内需映射到 app.asar.unpacked
-            let exePath = path.join(__dirname, 'sys_audio.exe');
+            let exePath = path.join(ROOT, 'native', 'sys_audio.exe');
             if (exePath.includes('app.asar')) {
                 exePath = exePath.replace('app.asar', 'app.asar.unpacked');
             }

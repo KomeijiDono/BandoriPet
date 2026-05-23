@@ -12,8 +12,11 @@ const { exec, spawn } = require('child_process');
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, globalShortcut } = require('electron');
 const { Worker } = require('worker_threads');
 
+// main.js 位于 src/，项目根目录为上一级
+const ROOT = path.join(__dirname, '..');
+
 // ---- GPU 硬件加速配置（hw_config.json 可选） ----
-const configPath = path.join(__dirname, 'hw_config.json');
+const configPath = path.join(ROOT, 'hw_config.json');
 let useGPU = true;
 try {
     if (fs.existsSync(configPath)) {
@@ -46,11 +49,11 @@ const sovitsMgr = initSoVITSManager({ path, spawn, ipcMain, voiceConfigs });
 app.whenReady().then(() => {
 
     // ---- 1. 情绪雷达（可选） ----
-    const radarPath = path.join(__dirname, 'emotion_radar.py');
+    const radarPath = path.join(ROOT, 'emotion_radar.py');
     if (fs.existsSync(radarPath)) {
         console.log("后台静默启动...");
         radarProcess = spawn('python', [radarPath], {
-            cwd: __dirname,
+            cwd: ROOT,
             windowsHide: true 
         });
         radarProcess.stdout.on('data', (data) => console.log(`[情绪雷达]: ${data.toString().trim()}`));
@@ -75,7 +78,7 @@ app.whenReady().then(() => {
         }
     });
 
-    win.loadFile(path.join(__dirname, 'index.html'));
+    win.loadFile(path.join(ROOT, 'index.html'));
     win.once('ready-to-show', () => {
         win.maximize();
         win.show();
@@ -102,7 +105,7 @@ app.whenReady().then(() => {
     }
 
     // ---- 4. Matter.js 物理引擎（墙壁 + 道具管理） ----
-    const phy = initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win });
+    const phy = initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win, ROOT });
 
     // ---- 5. 窗口关闭时清理物理道具 ----
     win.on('closed', () => {
@@ -120,7 +123,7 @@ app.whenReady().then(() => {
     // ---- 6. 系统托盘菜单 ----
     tray = createTray({
         Tray, Menu, app,
-        iconPath: path.join(__dirname, 'icon.ico'),
+        iconPath: path.join(ROOT, 'assets', 'icon.ico'),
         win,
         onImmersiveToggle: (isImmersive) => {
             if (phy && phy.physicalItems) {
@@ -141,7 +144,7 @@ app.whenReady().then(() => {
     registerWindowControls({ ipcMain, win });
 
     // ---- 8. 系统音频采集（sys_audio.exe FFT） ----
-    const audioCap = initAudioCapture({ ipcMain, spawn, fs, path, __dirname, win });
+    const audioCap = initAudioCapture({ ipcMain, spawn, fs, path, __dirname, win, ROOT });
 
     // ---- 9. 媒体键控制（PowerShell 模拟） ----
     registerMediaControl({ ipcMain, exec });
