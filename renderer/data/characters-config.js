@@ -1,5 +1,4 @@
-// characters-config.js —— 角色配置数据
-// 此文件从 index.html 抽离，保持原始数据结构不变
+// characters-config.js —— 角色Live2D模型配置数据，含服装列表和角色prompt
 (function () {
   'use strict';
   window.CharactersConfig = {

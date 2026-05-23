@@ -1,12 +1,12 @@
 /**
  * update-notice.js — 版本更新公告
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
 
   var APP_VERSION = "2.1.3"; // 更新通知版本号
 
+  // 对比localStorage版本号，不一致则显示本次更新公告
   function initUpdateNotice() {
     if (localStorage.getItem('last_version') !== APP_VERSION) {
       var noticeText = document.getElementById('notice-text');
@@ -21,6 +21,7 @@
     }
   }
 
+  // 确认已读：记录当前版本号并隐藏公告面板
   function confirmUpdate() {
     localStorage.setItem('last_version', APP_VERSION);
     var updateNotice = document.getElementById('update-notice');

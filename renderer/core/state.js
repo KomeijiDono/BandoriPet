@@ -7,27 +7,21 @@
 (function () {
   'use strict';
 
+  // 核心存储 & 订阅表 & 桥接变量名列表
   var _state = {};
   var _listeners = {};
   var _bridgeVars = [];
 
-  /**
-   * 获取状态值
-   * @param {string} key
-   * @returns {*}
-   */
+  // ---- get/set/subscribe ----
+
   function get(key) {
     return _state[key];
   }
 
-  /**
-   * 设置状态值，触发变更回调
-   * @param {string} key
-   * @param {*} value
-   */
   function set(key, value) {
     var old = _state[key];
     _state[key] = value;
+    // 值发生变化时，通知所有订阅者
     if (old !== value && _listeners[key]) {
       _listeners[key].forEach(function (fn) {
         try { fn(value, old); } catch (e) { console.error('[State] 监听器报错:', key, e); }
@@ -35,38 +29,26 @@
     }
   }
 
-  /**
-   * 订阅状态变更
-   * @param {string} key
-   * @param {function} callback - (newValue, oldValue)
-   */
+  // 订阅状态变更
   function subscribe(key, callback) {
     if (!_listeners[key]) _listeners[key] = [];
     _listeners[key].push(callback);
   }
 
-  /**
-   * 移除订阅
-   * @param {string} key
-   * @param {function} callback
-   */
+  // 移除订阅
   function unsubscribe(key, callback) {
     if (_listeners[key]) {
       _listeners[key] = _listeners[key].filter(function (fn) { return fn !== callback; });
     }
   }
 
-  /**
-   * 注册一个状态键（含默认值、localStorage 持久化配置）
-   * @param {string} key       - 状态键名
-   * @param {*}      defaultValue
-   * @param {object} [opts]    - { persistKey?: string, bridge?: boolean }
-   *   persistKey: localStorage 键名，为空则不持久化
-   *   bridge: 是否创建 window 全局变量向后兼容桥接
-   */
+  // ---- register / bridge / registerAll ----
+
+  // 注册状态键（支持默认值、localStorage 持久化、window 桥接）
   function register(key, defaultValue, opts) {
     opts = opts || {};
     var val = defaultValue;
+    // 优先从 localStorage 恢复已持久化的值
     if (opts.persistKey) {
       try {
         var stored = localStorage.getItem(opts.persistKey);
@@ -77,6 +59,7 @@
     }
     _state[key] = val;
 
+    // 监听变更并自动写回 localStorage
     if (opts.persistKey) {
       subscribe(key, function (v) {
         try {
@@ -85,6 +68,7 @@
       });
     }
 
+    // 创建 window 全局变量桥接（兼容旧代码直接读写 window.xxx）
     if (opts.bridge && typeof window !== 'undefined') {
       _bridgeVars.push(key);
       Object.defineProperty(window, key, {
@@ -96,12 +80,7 @@
     }
   }
 
-  /**
-   * 从现有全局变量初始化向后兼容桥接
-   * 将 window 上已有的全局变量值吸收到 _state 中
-   * @param {string} key
-   * @param {string} [persistKey]
-   */
+  // 从现有 window 全局变量吸收值，建立向后兼容桥接
   function bridge(key, persistKey) {
     var val = window[key];
     _state[key] = val;
@@ -119,10 +98,7 @@
     });
   }
 
-  /**
-   * 批量注册状态键
-   * @param {object} defs - { key: { default, persistKey, bridge }, ... }
-   */
+  // 批量注册多个状态键
   function registerAll(defs) {
     Object.keys(defs).forEach(function (key) {
       var d = defs[key];
@@ -130,10 +106,9 @@
     });
   }
 
-  /**
-   * 获取当前状态的快照副本
-   * @returns {object}
-   */
+  // ---- snapshot ----
+
+  // 返回当前状态的深拷贝快照
   function snapshot() {
     return JSON.parse(JSON.stringify(_state));
   }

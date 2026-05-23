@@ -1,8 +1,18 @@
+// ============================================================
+//  BandoriPet 主进程入口 — 模块编排层
+//  职责：组装所有子模块、创建窗口、托盘、统一生命周期管理
+// ============================================================
+
+// ---- Node.js 内置模块 ----
 const fs = require('fs');
 const path = require('path');
 const { exec, spawn } = require('child_process');
+
+// ---- Electron 核心 API ----
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, globalShortcut } = require('electron');
 const { Worker } = require('worker_threads');
+
+// ---- GPU 硬件加速配置（hw_config.json 可选） ----
 const configPath = path.join(__dirname, 'hw_config.json');
 let useGPU = true;
 try {
@@ -12,9 +22,12 @@ try {
 } catch (e) {}
 if (!useGPU) app.disableHardwareAcceleration();
 
-let tray = null;
-let win;
-let radarProcess = null;
+// ---- 全局状态变量 ----
+let tray = null;          // 系统托盘实例
+let win;                  // 主 BrowserWindow
+let radarProcess = null;  // 情绪雷达 Python 子进程
+
+// ---- 子模块 require + 初始化 ----
 const voiceConfigs = require('./voice-config');
 const { initSoVITSManager } = require('./sovits-manager');
 const { createTray } = require('./tray-menu');
@@ -24,9 +37,15 @@ const { registerMediaControl } = require('./media-control');
 const { initPhysics } = require('./physics-engine');
 const { initGlobalShortcut } = require('./global-shortcut');
 
+// GSV 语音引擎管理器（返回 getProcess / killProcess 接口）
 const sovitsMgr = initSoVITSManager({ path, spawn, ipcMain, voiceConfigs });
 
+// ============================================================
+//  App 就绪回调 — 创建窗口、组装所有子系统
+// ============================================================
 app.whenReady().then(() => {
+
+    // ---- 1. 情绪雷达（可选） ----
     const radarPath = path.join(__dirname, 'emotion_radar.py');
     if (fs.existsSync(radarPath)) {
         console.log("后台静默启动...");
@@ -41,6 +60,7 @@ app.whenReady().then(() => {
         console.log("未找到 emotion_radar.py");
     }
 
+    // ---- 2. 创建主窗口（透明、无框、4K） ----
     win = new BrowserWindow({
         width: 3840,
         height: 2160,
@@ -61,6 +81,7 @@ app.whenReady().then(() => {
         win.show();
     });
 
+    // ---- 3. 媒体监听 Worker 线程 ----
     try {
         const workerPath = path.join(__dirname, 'media_worker.js');
         const mediaWorker = new Worker(workerPath);
@@ -80,8 +101,10 @@ app.whenReady().then(() => {
         console.error("启动媒体监听线程失败:", e);
     }
 
+    // ---- 4. Matter.js 物理引擎（墙壁 + 道具管理） ----
     const phy = initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win });
 
+    // ---- 5. 窗口关闭时清理物理道具 ----
     win.on('closed', () => {
         if (phy && phy.physicalItems) {
             phy.physicalItems.forEach(item => {
@@ -94,6 +117,7 @@ app.whenReady().then(() => {
         app.quit();
     });
 
+    // ---- 6. 系统托盘菜单 ----
     tray = createTray({
         Tray, Menu, app,
         iconPath: path.join(__dirname, 'icon.ico'),
@@ -113,14 +137,19 @@ app.whenReady().then(() => {
         }
     });
 
+    // ---- 7. 窗口控制 IPC（最小化/最大化/关闭/置顶/鼠标穿透） ----
     registerWindowControls({ ipcMain, win });
 
+    // ---- 8. 系统音频采集（sys_audio.exe FFT） ----
     const audioCap = initAudioCapture({ ipcMain, spawn, fs, path, __dirname, win });
 
+    // ---- 9. 媒体键控制（PowerShell 模拟） ----
     registerMediaControl({ ipcMain, exec });
 
+    // ---- 10. 全局快捷键（径向菜单） ----
     initGlobalShortcut({ ipcMain, globalShortcut, win, app });
 
+    // ---- 11. 退出时统一清理所有子进程 ----
     app.on('will-quit', () => {
         if (sovitsMgr.getProcess()) {
             sovitsMgr.killProcess();

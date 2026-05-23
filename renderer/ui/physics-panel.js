@@ -1,6 +1,6 @@
 /**
  * physics-panel.js — 物理挂件控制面板
- * 从 index.html 内联脚本提取，IIFE 模式
+ * IIFE 模式
  */
 (function () {
   'use strict';
@@ -13,12 +13,14 @@
 
   var activePhysicsItems = [];
 
+  // SHAPE_ICONS：三种形状（圆形/方形/八边形）的 SVG 图标映射
   const SHAPE_ICONS = {
     'circle': '<svg width="12" height="12" viewBox="0 0 16 16" style="vertical-align: -2px; margin-right: 4px;"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>圆形',
     'rectangle': '<svg width="12" height="12" viewBox="0 0 16 16" style="vertical-align: -2px; margin-right: 4px;"><rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"/></svg>方形',
     'octagon': '<svg width="12" height="12" viewBox="0 0 16 16" style="vertical-align: -2px; margin-right: 4px;"><polygon points="5,1 11,1 15,5 15,11 11,15 5,15 1,11 1,5" fill="none" stroke="currentColor" stroke-width="2"/></svg>八边形'
   };
 
+  // 切换物理道具面板显示/隐藏
   function togglePhysicsPanel() {
     const panel = document.getElementById('physics-panel');
     if (panel.style.display === 'none') {
@@ -29,6 +31,7 @@
     }
   }
 
+  // 加载物理道具缩略图画廊（从主进程获取图片列表）
   async function loadPhysicsGallery() {
     const images = await BandoriIPC.invoke('get-physics-images');
     const gallery = document.getElementById('physics-gallery');
@@ -47,6 +50,7 @@
     });
   }
 
+  // 生成物理道具：在屏幕顶部中心创建并通知主进程
   async function spawnPhysicsItem(name, src) {
     const maxItems = parseInt(document.getElementById('slider-max').value);
 
@@ -70,6 +74,7 @@
     renderActivePhysicsList();
   }
 
+  // 渲染活跃道具列表：每行显示名称、形状切换按钮、大小滑块、删除按钮
   function renderActivePhysicsList() {
     const list = document.getElementById('active-physics-list');
     list.innerHTML = '';
@@ -89,6 +94,7 @@
   }
 
   function resizePhysicsItem(id, newSize) {
+    // 调整道具大小并通知主进程
     const sizeNum = parseInt(newSize);
     const item = activePhysicsItems.find(i => i.id === id);
     if (item) item.size = sizeNum;
@@ -96,17 +102,20 @@
   }
 
   function removePhysicsItem(id) {
+    // 移除单个道具并刷新列表
     BandoriIPC.send('remove-physics-item', id);
     activePhysicsItems = activePhysicsItems.filter(i => i.id !== id);
     renderActivePhysicsList();
   }
 
   function clearAllPhysicsItems() {
+    // 清除全部物理道具
     BandoriIPC.send('clear-all-physics');
     activePhysicsItems = [];
     renderActivePhysicsList();
   }
 
+  // 同步滑块参数：更新显示值、持久化存储、通知主进程
   function syncParams() {
     const gravity = parseFloat(document.getElementById('slider-gravity').value);
     const bounce = parseFloat(document.getElementById('slider-bounce').value);
@@ -133,10 +142,12 @@
   }
 
   function changePhysicsShape(id) {
+    // 切换道具碰撞形状（圆形↔方形↔八边形循环）
     BandoriIPC.send('physics-change-shape', id);
   }
 
   var lastSyncData = { relX: 0, relY: 0, width: 0, height: 0 };
+  // 同步 Live2D 模型作为 UI 碰撞体到主进程（仅在数据变化时发送）
   function syncUIPhysics() {
     const pet = window.live2dPet;
     if (!pet || !pet.visible || pet.destroyed || !pet.internalModel) return;
@@ -162,6 +173,7 @@
     }
   }
 
+  // 通过 requestAnimationFrame 持续循环同步 UI 碰撞体
   function loopSync() {
     syncUIPhysics();
     requestAnimationFrame(loopSync);

@@ -1,6 +1,5 @@
 /**
  * particles.js — Canvas 浮动粒子系统
- * 从 index.html 内联脚本抽离
  * 依赖：window.hexToRgb、window.drawStar（由 mouse-trail.js 暴露）
  */
 (function () {
@@ -11,6 +10,7 @@
   var particlesArray = [];
   var isAnimating = false;
 
+  // 初始化粒子数组：根据设置生成 count 个 {x,y,size,speed,opacity,color,shape} 对象并启动动画
   function initParticles() {
     pCanvas.width = window.innerWidth;
     pCanvas.height = window.innerHeight;
@@ -39,6 +39,7 @@
     }
   }
 
+  // requestAnimationFrame 循环：逐帧更新粒子位置/边界回绕、绘制圆形或星形
   function animateParticles() {
     var bgModeEl = document.getElementById('bg-mode');
     if (bgModeEl && bgModeEl.value !== 'particles') {

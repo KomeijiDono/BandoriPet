@@ -1,10 +1,10 @@
 /**
  * radial-menu.js — 径向轮盘菜单
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
 
+  // 径向菜单选项：物理道具、群聊、角色切换、控制台四个入口
   var radialOptions = [
     {
       name: '物理道具',
@@ -32,6 +32,7 @@
   var radialKey = localStorage.getItem('radial_key') || '`';
   var radialMode = localStorage.getItem('radial_mode') || 'click';
 
+  // 构建径向菜单：将选项按圆形均匀分布在 95px 半径圆上
   function buildRadialMenu() {
     var box = document.getElementById('radial-items-box');
     if (!box) return;
@@ -64,6 +65,7 @@
     setRadialVisible(false);
   }
 
+  // 控制显示/隐藏，带动画过渡
   function setRadialVisible(show) {
     radialVisible = show;
     var menu = document.getElementById('radial-menu');
@@ -74,6 +76,7 @@
   }
 
   // ========== 键盘/鼠标事件 ==========
+  // 鼠标中键：click 模式切换显示，hold 模式下按下显示
   window.addEventListener('mousedown', function (e) {
     if (e.button === 1) {
       e.preventDefault();
@@ -82,10 +85,12 @@
     }
   });
 
+  // 鼠标中键松开：hold 模式下隐藏
   window.addEventListener('mouseup', function (e) {
     if (e.button === 1 && radialMode === 'hold') setRadialVisible(false);
   });
 
+  // 键盘按下：自定义快捷键触发径向菜单（输入框内忽略）
   window.addEventListener('keydown', function (e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (e.repeat) return;
@@ -98,6 +103,7 @@
     }
   });
 
+  // 键盘松开：hold 模式下隐藏
   window.addEventListener('keyup', function (e) {
     if (radialMode === 'hold' && e.key.toLowerCase() === radialKey.toLowerCase()) {
       setRadialVisible(false);
@@ -106,6 +112,7 @@
 
   // 全局快捷键触发
   window.lastGlobalTrigger = 0;
+  // 全局快捷键触发（主进程 → 渲染进程），带 300ms 防抖
   window.BandoriIPC.on('trigger-global-radial', function () {
     var now = Date.now();
     if (now - window.lastGlobalTrigger < 300) return;

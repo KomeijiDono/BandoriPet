@@ -5,6 +5,7 @@
 (function () {
   'use strict';
 
+  // 切换设置面板显示/隐藏，打开时从 localStorage 恢复所有字段值
   function toggleSettings() {
     var panel = document.getElementById('settings-panel');
     if (!panel) return;
@@ -25,6 +26,7 @@
     }
   }
 
+  // 保存设置：手机尺寸/缩放、API 预设，保存后触发模型 wink 动画
   function saveSettings() {
     var apiPreset = document.getElementById('api-preset').value;
     var phoneW = document.getElementById('set-phone-w').value;
@@ -58,7 +60,7 @@
     }
   }
 
-  // 面板拖拽（用 initDraggable 或手动实现）
+  // 面板拖拽：通过标题栏 initDraggable 实现拖拽，设置拖拽状态标记
   setTimeout(function () {
     var panel = document.getElementById('settings-panel');
     var header = document.getElementById('settings-header');

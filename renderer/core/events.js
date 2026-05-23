@@ -11,48 +11,36 @@
 (function () {
   'use strict';
 
-  /** @type {Map<string, Array<{fn:Function, once:boolean}>>} */
+  // 事件存储表：eventName → [{ fn, once }]
   var _events = {};
 
-  /**
-   * 注册事件监听
-   * @param {string}   event
-   * @param {function} callback
-   */
+  // ---- 监听注册 ----
+
+  // 注册持久监听
   function on(event, callback) {
     if (!_events[event]) _events[event] = [];
     _events[event].push({ fn: callback, once: false });
   }
 
-  /**
-   * 注册一次性监听
-   * @param {string}   event
-   * @param {function} callback
-   */
+  // 注册一次性监听（触发后自动移除）
   function once(event, callback) {
     if (!_events[event]) _events[event] = [];
     _events[event].push({ fn: callback, once: true });
   }
 
-  /**
-   * 移除监听
-   * @param {string}   event
-   * @param {function} callback
-   */
+  // ---- 移除 & 触发 ----
+
+  // 移除指定回调
   function off(event, callback) {
     if (!_events[event]) return;
     _events[event] = _events[event].filter(function (h) { return h.fn !== callback; });
   }
 
-  /**
-   * 触发事件
-   * @param {string} event
-   * @param {...*}   args
-   */
+  // 触发事件，遍历所有处理器并清理一次性监听
   function emit(event) {
     if (!_events[event]) return;
     var args = Array.prototype.slice.call(arguments, 1);
-    var handlers = _events[event].slice(); // 拷贝，防止遍历中修改
+    var handlers = _events[event].slice(); // 拷贝，防止遍历中修改数组
     for (var i = 0; i < handlers.length; i++) {
       var h = handlers[i];
       try { h.fn.apply(null, args); } catch (e) { console.error('[EventBus] 事件处理报错:', event, e); }
@@ -62,25 +50,19 @@
     }
   }
 
-  /**
-   * 清除某事件的全部监听
-   * @param {string} event
-   */
+  // ---- 清理 ----
+
+  // 清除某事件的所有监听
   function clear(event) {
     delete _events[event];
   }
 
-  /**
-   * 清除全部事件监听
-   */
+  // 清除全部事件监听
   function clearAll() {
     _events = {};
   }
 
-  /**
-   * 列出当前活跃的事件名
-   * @returns {string[]}
-   */
+  // 列出当前有监听器的事件名
   function list() {
     return Object.keys(_events).filter(function (k) { return _events[k].length > 0; });
   }

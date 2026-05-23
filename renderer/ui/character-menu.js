@@ -1,6 +1,5 @@
 /**
  * character-menu.js — 角色切换 UI
- * 从 index.html 内联脚本提取
  * 
  * 外部依赖（通过 window 或 typeof 守卫访问）：
  *   - charactersConfig        (characters-config.js)
@@ -36,7 +35,7 @@
   window.draggingModel = false;
   window.modelDragMoved = false;
 
-  // ===== 主菜单 =====
+  // 切换角色菜单显示/隐藏，带弹入弹出动画
   function toggleCharMenu() {
     var menu = document.getElementById('char-menu');
     if (menu.style.display === 'flex' || menu.style.display === '') {
@@ -53,7 +52,7 @@
     }
   }
 
-  // ===== 角色画廊 =====
+  // 渲染角色画廊列表，遍历 charactersConfig 创建角色卡片
   function renderGallery() {
     var list = document.getElementById('char-gallery-list');
     list.innerHTML = '';
@@ -91,7 +90,7 @@
     }
   }
 
-  // ===== 画廊横向滚轮 =====
+  // 画廊支持鼠标滚轮横向滚动
   document.addEventListener('DOMContentLoaded', function () {
     var gallery = document.getElementById('char-gallery-list');
     if (gallery) {
@@ -104,7 +103,7 @@
     }
   });
 
-  // ===== 详情面板 =====
+  // 打开角色详情面板，加载服装列表和各项设置参数
   function openDetailPanel(id) {
     // typeof 守卫确保 charactersConfig 存在
     if (typeof charactersConfig === 'undefined') {
@@ -167,11 +166,12 @@
     panel.classList.add('active');
   }
 
+  // 关闭详情面板（移除 active 类）
   function closeDetailPanel() {
     document.getElementById('char-detail-panel').classList.remove('active');
   }
 
-  // ===== 保存设置 =====
+  // 保存角色菜单设置：模型参数、人设提示词、语音语言等持久化到 localStorage
   function saveMenuSettings() {
     if (!selectedCharId) return;
 
@@ -238,7 +238,7 @@
     closeDetailPanel();
   }
 
-  // ===== 模型拖拽 =====
+  // 切换模型拖拽模式：注册/注销 pointer 事件实现 Live2D 模型拖动
   function toggleModelDrag(enabled) {
     localStorage.setItem('model_drag_enabled', enabled);
 
@@ -265,7 +265,7 @@
     }
   }
 
-  // ===== 鼠标跟随 =====
+  // 切换鼠标视线跟随：控制 Live2D 模型头部追踪鼠标位置
   function toggleMouseFollow(enabled) {
     localStorage.setItem('mouse_follow_enabled', enabled);
 
@@ -287,7 +287,7 @@
     }
   }
 
-  // ===== 拖拽事件处理（this 指向 Live2D PixiJS DisplayObject） =====
+  // 拖拽开始：记录初始位置和偏移量（this 指向 Live2D PixiJS DisplayObject）
   function onDragStart(event) {
     dragData = event.data;
     window.draggingModel = true;
@@ -299,6 +299,7 @@
     dragOffsetY = this.y - newPosition.y;
   }
 
+  // 拖拽结束：保存最终位置到 localStorage 并同步输入框
   function onDragEnd() {
     window.draggingModel = false;
     dragData = null;
@@ -319,6 +320,7 @@
     localStorage.setItem('anon_y', newY);
   }
 
+  // 拖拽中：通过 this.x/this.y 实时更新 PIXI DisplayObject 位置
   function onDragMove() {
     if (window.draggingModel) {
       var newPosition = dragData.getLocalPosition(this.parent);

@@ -1,6 +1,5 @@
 /**
  * music-widget.js — 音乐信息挂件 + 全屏歌词 + 媒体监听
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
@@ -11,6 +10,7 @@
         let localCurrentSec = 0;
         let lastSyncTime = Date.now();
 
+        // 通过 IPC 发送媒体控制指令（播放/暂停/上一首/下一首）并播放点击音效
         function sendMediaControl(action) {
             BandoriIPC.send('media-control', action);
             if (typeof uiClickSound !== 'undefined') {
@@ -19,6 +19,7 @@
             }
         }
 
+        // 解析 LRC 歌词文本为 { time, text } 数组，支持 [mm:ss.ms] 格式
         function parseLRC(lrcText) {
             const lines = lrcText.split('\n');
             const parsed = [];
@@ -78,6 +79,7 @@
                 coverFound = true;
             }
 
+            // 网易云 → lrclib → iTunes 三层回退：优先网易云 API 获取歌词和封面，失败则逐级降级
             const searchQueries = [
                 { query: `${cleanTitle} ${fullArtist}`, isFullMatch: true },
                 { query: `${cleanTitle} ${firstArtist}`, isFullMatch: true }
@@ -231,6 +233,7 @@
             musicWidget.style.top = localStorage.getItem('music_widget_y');
         }
 
+        // 音乐信息挂件拖拽初始化，复用全局锁控件，dragStateRef 同步穿透状态
         if (typeof initDraggable === 'function') {
             initDraggable(musicWidget, musicWidget, {
                 lockCheck: function () { var el = document.getElementById('lock-widget'); return el && el.checked; },
@@ -241,6 +244,7 @@
             });
         }
 
+        // 根据开关切换音乐挂件与全屏歌词的显示/隐藏
         function toggleMusicInfo() {
             const enable = document.getElementById('music-info-enable').checked;
             localStorage.setItem('music_info_enable', enable);
@@ -258,6 +262,7 @@
             }
         });
 
+        // 应用歌词字号与显示风格（默认/卡拉OK），写 localStorage 持久化
         function applyLyricStyle() {
             const size = document.getElementById('lyric-size').value;
             const style = document.getElementById('lyric-style').value;
@@ -293,6 +298,8 @@
         let wasFakeSpeaking = false; 
         let fakeSpeakTimer = null;
 
+        // TTS 语音播放：清洗文本 → 调用 127.0.0.1:9880 API → 注入 Live2D 假口型同步
+        // 失败则降级为纯文本模式（无音频，仅触发情绪动作 + 模拟嘴部动画）
         async function playSoVitsAudio(text, lang = "ja", speakerId = null, emotionTags = []) {
             const charId = speakerId || localStorage.getItem('current_char') || 'anon';
         if (currentVoice) {
@@ -414,6 +421,7 @@
             }
         });
 
+        // 歌词挂件拖拽初始化，独立锁控件 lock-lyric，dragStateRef 同步穿透状态
         if (typeof initDraggable === 'function') {
             initDraggable(lyricWidget, lyricWidget, {
                 lockCheck: function () { var el = document.getElementById('lock-lyric'); return el && el.checked; },

@@ -791,7 +791,7 @@
     <script src="renderer/chat/ipad-chat.js"></script>
 
     <script>
-        // === 启动保护：优先注册 splash 隐藏，避免后续代码报错导致永远卡启动画面 ===
+        // ---- 启动保护：splash 淡出 + UI 渐显
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
@@ -816,8 +816,8 @@
                 });
             }, 6500);
         });
-        // === 启动保护结束 ===
 
+        // ---- 全局音量控制：globalVolume + updateVolume
         let globalVolume = parseFloat(localStorage.getItem('anon_volume')) || 1.0;
         function updateVolume(val) {
             globalVolume = parseFloat(val);
@@ -828,6 +828,7 @@
             }
         }
 
+        // ---- UI点击音效：uiClickSound + click 事件监听
         const uiClickSound = new Audio('click.mp3'); 
         uiClickSound.volume = 0.9; 
 
@@ -844,6 +845,7 @@
             }
         });
 
+        // ---- 设置面板折叠区：动态折叠 section
         function initSettingsCollapsibleSections() {
             const panel = document.getElementById('settings-panel');
             if (!panel || panel.dataset.collapsibleReady === 'true') return;
@@ -905,14 +907,11 @@
 
         document.addEventListener('DOMContentLoaded', initSettingsCollapsibleSections);
 
+        // ---- IPC/State 核心初始化：require → AppState.registerAll → tray-action
         try {
         const { ipcRenderer } = require('electron');
-        // 向后兼容：将现有 ipcRenderer 引用桥接到 BandoriIPC
-        // 后续逐步替换为 BandoriIPC.send/on，最终删除此行
 
         // ====== 状态中心初始化 ======
-        // 后续各模块抽离时，将通过 AppState.register() 接管各自状态。
-        // 当前保留旧 let 变量不动，逐步迁移。
         AppState.registerAll({
           globalVolume:       { default: 1.0, persistKey: 'anon_volume' },
           chatMemory:         { default: [] },
@@ -996,6 +995,8 @@
                 if(ipad) ipad.style.visibility = vis;
             }
         });
+        // ---- PIXI 应用创建 + Live2D 状态/情绪/模型加载（已迁移至 renderer/live2d/model.js）
+        // ---- 角色初始化尝试：initChar/initOutfit → loadCustomModel → BandoriIPC.send（已迁移至 renderer/live2d/model.js）
         } catch (e) {
             console.error('[启动] 核心 IPC/State 模块初始化失败:', e);
         }

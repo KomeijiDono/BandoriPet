@@ -1,21 +1,22 @@
 /**
  * model.js — Live2D 模型加载与情绪状态管理
- * 从 index.html 内联脚本完全抽离
+ * PIXI 初始化 + 模型发现与加载 + 情绪应用 + 交互反馈
  */
 (function () {
   'use strict';
 
+  // ===== 状态变量 =====
   var app, live2dModel;
-  var currentLive2dMotionNames = new Set();
-  var currentLive2dExpressionNames = new Set();
-  var currentLive2dMotionList = [];
-  var currentLive2dExpressionList = [];
-  var voiceEmotionTimers = [];
-  var lastLive2DClickAt = 0;
-  var lastLive2DClickMotionName = '';
-  var lastLive2DClickExpressionName = '';
+  var currentLive2dMotionNames = new Set();          // 当前模型可用动作名集合
+  var currentLive2dExpressionNames = new Set();      // 当前模型可用表情名集合
+  var currentLive2dMotionList = [];                   // 动作名列表（已排序）
+  var currentLive2dExpressionList = [];               // 表情名列表（已排序）
+  var voiceEmotionTimers = [];                        // 语音情绪定时器句柄
+  var lastLive2DClickAt = 0;                          // 上次点击时间戳（防连点）
+  var lastLive2DClickMotionName = '';                 // 上次点击使用的动作名
+  var lastLive2DClickExpressionName = '';             // 上次点击使用的表情名
 
-  // -- PIXI 应用初始化 --
+  // ===== PIXI 应用初始化：绑定 canvas，透明背景，自适应窗口 =====
   try {
     app = new PIXI.Application({
       view: document.getElementById('canvas'), autoStart: true, resizeTo: window, backgroundAlpha: 0
@@ -29,11 +30,13 @@
 
   // ===== 情绪状态管理函数 =====
 
+  // 清除所有语音情绪定时器，防止多段语音情绪冲突
   function clearVoiceEmotionTimers() {
     voiceEmotionTimers.forEach(function (timer) { clearTimeout(timer); });
     voiceEmotionTimers = [];
   }
 
+  // 根据情绪标签将表情+动作应用到当前模型
   function applyLive2DEmotion(tag, charId) {
     if (!live2dModel) return;
     charId = charId || localStorage.getItem('current_char') || 'anon';
@@ -49,6 +52,7 @@
     }
   }
 
+  // 直接按名称应用表情+动作到当前模型
   function applyLive2DResourcePair(expressionName, motionName) {
     if (!live2dModel) return;
     if (expressionName) {
@@ -59,11 +63,13 @@
     }
   }
 
+  // 清除语音定时器并恢复到 neutral 表情
   function restoreLive2DNeutral(charId) {
     clearVoiceEmotionTimers();
     applyLive2DEmotion('normal', charId);
   }
 
+  // 启动语音情绪动作序列：根据音频长度分配各情绪标签的播放时间
   function startVoiceEmotionActions(tags, charId, audio) {
     clearVoiceEmotionTimers();
     var sequence = (Array.isArray(tags) && tags.length > 0 ? tags : ['normal']).slice(0, 3);
@@ -76,6 +82,7 @@
     });
   }
 
+  // 随机选取一个资源名，避免与上次重复
   function pickRandomLive2DName(names, previousName) {
     if (!Array.isArray(names) || names.length === 0) return '';
     if (names.length === 1) return names[0];
@@ -84,6 +91,7 @@
     return source[Math.floor(Math.random() * source.length)] || '';
   }
 
+  // 点击反馈：随机播放表情+动作，700ms 防连点，2.4s 后恢复 neutral
   function playLive2DClickFeedback() {
     if (!live2dModel) return;
     if (typeof window.modelDragMoved !== 'undefined' && window.modelDragMoved) return;
@@ -104,6 +112,7 @@
     voiceEmotionTimers.push(setTimeout(function () { restoreLive2DNeutral(charId); }, 2400));
   }
 
+  // 绑定 Live2D 模型点击交互事件
   function bindLive2DInteractionFeedback() {
     if (!live2dModel) return;
     try { live2dModel.off('pointertap', playLive2DClickFeedback); } catch (e) {}
@@ -113,7 +122,7 @@
   }
 
   // ===== 模型加载 =====
-
+  // 自动发现模型文件：读取 _mtn_emp/<mtnFolder>/ ，自动注入 motions 和 expressions 到 model.json
   async function loadCustomModel(charId, outfitId) {
     if (typeof window.applyBgMode === 'function') window.applyBgMode();
     if (live2dModel) {
@@ -200,7 +209,7 @@
     }, 150);
   }
 
-  // ===== 初始化加载首个模型 =====
+  // ===== 首次启动：延迟 0ms 加载初始角色模型 =====
   setTimeout(function () {
     try {
       var charactersConfig = window.CharactersConfig;

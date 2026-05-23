@@ -1,7 +1,6 @@
 /**
  * display-settings.js — 显示与系统设置
  * 管理 GPU 加速、FPS 限制、开机自启、分辨率等
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
@@ -18,6 +17,7 @@
     if (appRef) savedApp = appRef;
   }
 
+  // 从 hw_config.json 读取 GPU 硬件加速开关状态
   function initGPUStatus() {
     let useGPU = true;
     try {
@@ -29,6 +29,7 @@
     if (el) el.checked = useGPU;
   }
 
+  // 切换 GPU 加速并写入配置文件（需重启生效）
   function toggleGPU() {
     var el = document.getElementById('hw-accel');
     if (!el) return;
@@ -43,6 +44,7 @@
     }
   }
 
+  // 初始化 FPS 限制值与开机自启复选框状态
   function initDisplaySettings() {
     var fpsEl = document.getElementById('s-fps');
     if (fpsEl) fpsEl.value = localStorage.getItem('disp_fps') || '60';
@@ -52,6 +54,7 @@
     toggleAutoStart(true);
   }
 
+  // 应用 FPS 限制到 PIXI ticker（0 = 无限制）
   function applyFPS() {
     var fpsEl = document.getElementById('s-fps');
     if (!fpsEl) return;
@@ -62,6 +65,7 @@
     }
   }
 
+  // 切换开机自启（写入注册表 Run 键）
   function toggleAutoStart(isInit) {
     var el = document.getElementById('s-autostart');
     if (!el) return;

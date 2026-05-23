@@ -1,25 +1,30 @@
 /**
  * window-control.js — 窗口控制
  * 最小化、最大化、关闭、标题栏、置顶、鼠标穿透
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
 
   // ========== 窗口操作 ==========
+
+  // 最小化窗口
   function minWindow() {
     window.BandoriIPC.send('window-min');
   }
 
+  // 最大化窗口
   function maxWindow() {
     window.BandoriIPC.send('window-max');
   }
 
+  // 关闭窗口
   function closeWindow() {
     window.BandoriIPC.send('window-close');
   }
 
   // ========== 标题栏 ==========
+
+  // 显示/隐藏标题栏，隐藏时提示用户无法移动窗口
   function toggleTitleBar() {
     var hide = document.getElementById('hide-titlebar').checked;
     var titleBar = document.getElementById('title-bar');
@@ -35,6 +40,8 @@
   }
 
   // ========== 窗口置顶 ==========
+
+  // 切换窗口置顶状态，isInit=true时不触发语音反馈
   function toggleAlwaysOnTop(isInit) {
     var el = document.getElementById('s-always-top');
     if (!el) return;
@@ -46,6 +53,7 @@
   // ========== 鼠标穿透 ==========
   var lastIgnoreState = false;
 
+  // 初始化：从localStorage恢复穿透/标题栏/置顶三项状态
   function initMousePassthrough() {
     // 恢复穿透状态
     var ptSaved = localStorage.getItem('s_passthrough');
@@ -74,9 +82,11 @@
     }
   }
 
+  // 鼠标穿透核心逻辑：60fps轮询所有拖拽状态变量，任一拖拽中则禁用穿透
+  // 仅当鼠标在纯背景元素（canvas/粒子/背景层）上且不在Live2D模型区域时，才允许穿透
   document.addEventListener('mousemove', function (e) {
     var enablePassthrough = document.getElementById('s-passthrough') && document.getElementById('s-passthrough').checked;
-    if (!enablePassthrough) {
+    if (!enablePassthrough) {// 穿透关闭时确保恢复鼠标响应
       if (lastIgnoreState !== false) {
         lastIgnoreState = false;
         window.BandoriIPC.send('set-ignore-mouse', false);
@@ -86,6 +96,7 @@
 
     var shouldIgnore = true;
 
+    // 检测所有拖拽状态变量：任一为true则禁止穿透
     if ((typeof isVisDragging !== 'undefined' && isVisDragging) ||
         (typeof isSetDragging !== 'undefined' && isSetDragging) ||
         (typeof isDragging !== 'undefined' && isDragging) ||

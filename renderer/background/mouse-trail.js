@@ -1,11 +1,11 @@
 /**
  * mouse-trail.js — 鼠标拖尾 + 点击特效
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
 
   // ========== 工具函数 ==========
+  // 十六进制颜色转 RGB 字符串，支持 #rgb 简写和 #rrggbb 标准格式
   function hexToRgb(hex) {
     var r, g, b;
     if (hex.length === 4) {
@@ -22,6 +22,7 @@
     return r + ', ' + g + ', ' + b;
   }
 
+  // Canvas 下绘制 N 角星形（spikes=5），粒子系统复用此函数绘制星形粒子
   function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
     var rot = Math.PI / 2 * 3;
     var x = cx;
@@ -67,6 +68,7 @@
   window.addEventListener('resize', resizeMtCanvas);
   resizeMtCanvas();
 
+  // 读取设置面板控件值并持久化，切换样式为 none 时清空对应粒子数组
   function applyMouseTrailSettings() {
     var styleEl = document.getElementById('mt-style');
     var clickEl = document.getElementById('mc-style');
@@ -90,6 +92,7 @@
     if (cStyle === 'none') clickParticles = [];
   }
 
+  // 鼠标移动监听：根据样式（stars/hearts/geometric/neon）按概率生成拖尾粒子
   document.addEventListener('mousemove', function (e) {
     if (tStyle === 'none') return;
     if ((tStyle === 'stars' || tStyle === 'hearts' || tStyle === 'geometric') && Math.random() > 0.4) return;

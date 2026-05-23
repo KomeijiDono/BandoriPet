@@ -1,6 +1,5 @@
 /**
  * visualizer.js — C++ 音频可视化组件 + 挂件拖拽
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
@@ -20,6 +19,7 @@
     return result ? parseInt(result[1], 16) + ', ' + parseInt(result[2], 16) + ', ' + parseInt(result[3], 16) : '255, 182, 193';
   }
 
+  // 切换 C++ 音频采集开关，显示/隐藏可视化挂件
   function toggleCppAudio() {
     var enable = document.getElementById('cpp-audio-enable').checked;
     window.BandoriIPC.send('toggle-cpp-audio', enable);
@@ -41,6 +41,7 @@
     }
   }
 
+  // requestAnimationFrame 驱动的高级音频可视化：柱状/环形/线形三种风格 + HSL 动态色相
   function drawAdvancedVisualizer() {
     if (!isCppVisualizing) return;
     visAnimId = requestAnimationFrame(drawAdvancedVisualizer);
@@ -163,6 +164,7 @@
   // ========== 挂件拖拽 ==========
   var visWidget = document.getElementById('vis-widget');
 
+  // 同步挂件宽高与 Canvas 尺寸，以中心对齐方式修正位置偏移
   function updateVisSize() {
     var w = parseInt(document.getElementById('vis-width').value);
     var h = parseInt(document.getElementById('vis-height').value);
@@ -218,6 +220,7 @@
     }
   });
 
+  // 可视化挂件拖拽初始化，lockCheck 复用全局锁控件，dragStateRef 同步穿透状态
   if (typeof initDraggable === 'function') {
     initDraggable(visWidget, visWidget, {
       lockCheck: function () { var el = document.getElementById('lock-widget'); return el && el.checked; },

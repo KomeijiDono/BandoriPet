@@ -1,17 +1,26 @@
 /**
  * chat-api.js — 手机聊天核心
- * 提供 addChatMessage、chatMemory 等被其他模块广泛引用的函数
+ * 提供 addChatMessage、sendMessage、chatMemory 等被 phone-ui.js / live2d 模块广泛引用的函数。
+ * 负责：消息气泡渲染、多 API 请求（DeepSeek/Gemini/OpenAI/Qwen）、多语言翻译指令注入、语音文本提取、情绪标签处理。
  */
 (function () {
   'use strict';
 
+  // 对话记忆（最多保留最近 20 条），挂载到 window.chatMemory 供其他模块共享
   var chatMemory = [];
   var MAX_HISTORY = 20;
 
+  /**
+   * 向手机聊天界面添加一条消息气泡
+   * @param {string} text - 消息文本
+   * @param {string} sender - 'typing' 显示"对方正在输入..."指示器；'user' 用户气泡；其他为 AI 气泡
+   * 注：typing 指示器会在下一次非 typing 消息时自动移除
+   */
   function addChatMessage(text, sender) {
     var history = document.getElementById('phone-chat-history');
     if (!history) return;
 
+    // "对方正在输入..." 打字指示器（临时占位气泡，后面真正的消息到来时会被移除）
     if (sender === 'typing') {
       var typingMsg = document.createElement('div');
       typingMsg.className = 'msg-bubble msg-typing';
@@ -22,9 +31,11 @@
       return;
     }
 
+    // 正式消息到来，先移除打字指示器
     var typingIndicator = document.getElementById('msg-typing-indicator');
     if (typingIndicator) typingIndicator.remove();
 
+    // 根据 sender 添加不同样式的消息气泡：user → 右对齐绿色，ai → 左对齐白色
     var msgDiv = document.createElement('div');
     msgDiv.className = 'msg-bubble ' + (sender === 'user' ? 'msg-user' : 'msg-ai');
     msgDiv.innerText = text;
@@ -38,18 +49,30 @@
     window.chatMemory = chatMemory;
   }
 
+  /**
+   * 发送消息：用户输入 → 多 API 请求 → AI 回复 → 语音合成 + 聊天气泡
+   * 流程概览：
+   *  1. 读取用户输入并清空输入框
+   *  2. 根据 localStorage 选择 API 提供商（deepseek/gemini/openai/qwen）
+   *  3. 根据角色语音语言注入 ENFORCER 多语言翻译指令
+   *  4. 发送请求（Gemini 用 generateContent 格式，OpenAI 类用 chat/completions 格式）
+   *  5. 从回复中提取显示文本、语音文本、情绪标签
+   *  6. 失败时播放 cry 动画并回滚最后一条 user 记忆
+   */
   async function sendMessage() {
     var inputElement = document.getElementById('user-input');
     var text = inputElement.value.trim();
     if (!text) return;
 
+    // === 多 API 配置（用户自行填写） ===
     var apiConfigs = {
       "deepseek": { url: "https://api.deepseek.com/v1/chat/completions", key: "", model: "deepseek-chat" },
-      "gemini":   { url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=", key: "", model: "gemini-3.1-flash-lite-preview" },
+      "gemini":   { url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=", key: "", model: "gemini-3.1-flash-lite" },
       "openai":   { url: "https://api.openai.com/v1/chat/completions", key: "", model: "gpt-5.4-2026-03-05" },
       "qwen":     { url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", key: "", model: "qwen3.6-max-preview" }
     };
 
+    // === 根据 localStorage 选择活跃 API、角色、System Prompt ===
     var activeAPI = localStorage.getItem('api_preset') || "deepseek";
     var API_URL = apiConfigs[activeAPI].url;
     var API_KEY = apiConfigs[activeAPI].key;
@@ -71,6 +94,8 @@
       var aiReply = "";
       var currentChar = localStorage.getItem('current_char') || 'anon';
       var selectedLang = localStorage.getItem('voice_lang_' + currentChar) || 'ja';
+
+      // === ENFORCER：根据所选语音语言，向 AI 注入多语言翻译强制指令 ===
       var ENFORCER = "";
 
       if (selectedLang === 'ja') {
@@ -87,6 +112,7 @@
         ENFORCER = "\n\n【系统强制指令：必须在中文回复后，将西班牙语翻译放在 <es> 和 </es> 标签内！】";
       }
 
+      // === 发送请求（Gemini 路径：generateContent API；OpenAI 类路径：chat/completions） ===
       if (activeAPI === "gemini") {
         var geminiHistory = chatMemory.map(function (msg) {
           return { role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] };
@@ -118,6 +144,7 @@
       }
 
       if (aiReply) {
+        // === 情绪标签清理：统一 [tag] / <tag> 格式，仅保留合法语言标签的尖括号 ===
         aiReply = aiReply.replace(/(?:\[|<)(\/?(?:ja|zh|en|ko|yue|es))(?:\]|>)/gi, '<$1>');
         var validLangs = ['ja', 'zh', 'en', 'ko', 'yue', 'es', '/ja', '/zh', '/en', '/ko', '/yue', '/es'];
         aiReply = aiReply.replace(/<([^>]+)>/g, function (match, innerText) {
@@ -125,10 +152,12 @@
           return '[' + innerText + ']';
         });
 
+        // === 提取情绪标签（如 [happy] [sad]），传给 Live2D 动画系统 ===
         var Live2DEmotion = window.Live2DEmotion;
         var emotionTags = Live2DEmotion ? Live2DEmotion.extractEmotionTags(aiReply) : [];
         chatMemory.push({ role: 'ai', text: aiReply });
 
+        // === 语音文本提取：从 AI 回复中分离显示文本（中文）和语音文本（目标语言） ===
         var voiceText = aiReply;
         var voiceLang = selectedLang;
         var displayText = aiReply;
@@ -149,6 +178,7 @@
           if (match) { voiceText = match[1]; displayText = aiReply.replace(/<es>[\s\S]*?<\/es>/g, '').trim(); voiceLang = 'en'; }
         }
 
+        // === 清理残留标签、动作标签（如 [action_xxx]）、RP 括号（如 (*...*)） ===
         displayText = displayText.replace(/<\/[a-zA-Z]+>/g, '');
         displayText = displayText.replace(/(?:\[|【)[a-zA-Z0-9_\.]+(?:\]|】)/g, '');
         var cleanVoiceText = voiceText.replace(/(?:\[|【)[a-zA-Z0-9_\.]+(?:\]|】)/g, '');
@@ -165,13 +195,14 @@
         chatMemory.pop();
       }
     } catch (error) {
+      // === 错误处理：显示错误气泡 + 播放 Live2D cry 动画 + 回滚最后一条 user 记忆 ===
       console.error("API 请求失败:", error);
       addChatMessage("网络好像断了！[cry]", 'ai');
       chatMemory.pop();
       var model = window.live2dPet || window.live2dModel;
       if (model) {
-        try { model.motion("cry"); model.expression("cry"); } catch (e) { console.warn('[聊天] 模型动画失败:', e.message); }
-        setTimeout(function () { try { model.expression("default"); } catch (e) { console.warn('[聊天] 模型还原失败:', e.message); } }, 3000);
+        try { model.motion("cry"); model.expression("cry"); } catch (e) {}
+        setTimeout(function () { try { model.expression("default"); } catch (e) {} }, 3000);
       }
     }
   }

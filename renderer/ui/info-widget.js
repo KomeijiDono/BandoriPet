@@ -1,11 +1,11 @@
 /**
  * info-widget.js — 信息挂件（时钟、日期、问候语、拖拽、锁定）
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
 
   // ========== 时钟 ==========
+  // 每秒更新时钟时间、日期、问候语（根据时段和当前角色名称动态切换）
   function updateClock() {
     var now = new Date();
     var hours = String(now.getHours()).padStart(2, '0');
@@ -43,6 +43,7 @@
   updateClock();
 
   // ========== 拖拽 ==========
+  // 信息挂件拖拽：用 initDraggable 实现，支持锁定检查和位置持久化
   var widget = document.getElementById('info-widget');
   if (widget) {
     widget.style.left = localStorage.getItem('widget_x') || '20px';
@@ -59,6 +60,7 @@
   }
 
   // ========== 锁 ==========
+  // 切换挂件锁定状态
   function toggleWidgetLock() {
     var lockEl = document.getElementById('lock-widget');
     var isLocked = lockEl ? lockEl.checked : false;
@@ -78,6 +80,7 @@
   }
 
   // ========== 颜色 ==========
+  // 应用挂件颜色：从拾色器读取并应用到时钟/日期/问候/天气文字，持久化到 localStorage
   function applyWidgetColors() {
     var tColor = document.getElementById('c-time');
     var dColor = document.getElementById('c-date');

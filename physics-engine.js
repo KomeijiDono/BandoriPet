@@ -1,25 +1,36 @@
+// ============================================================================
+// physics-engine.js — Matter.js 物理引擎模块
+// 负责物理道具的生成、拖拽、碰撞检测、形状切换，共 13 个 IPC handler
+// 物理道具各自为独立 BrowserWindow（透明无框），通过 IPC 同步位置/角度
+// ============================================================================
 const Matter = require('matter-js');
 const { Engine, World, Bodies } = Matter;
 
+// initPhysics 依赖注入：接收 BrowserWindow、IPC、screen、fs、path 等主进程模块
 function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win }) {
+    // ---- 物理道具图片目录 ----
     const physicsItemsDir = path.join(__dirname, 'physics_items');
     if (!fs.existsSync(physicsItemsDir)) {
         fs.mkdirSync(physicsItemsDir, { recursive: true });
     }
 
+    // ---- 物理引擎和世界初始化 ----
     const engine = Engine.create();
     const world = engine.world;
-    engine.gravity.y = 1.5;
+    engine.gravity.y = 1.5;  // Y 轴重力（向下）
 
-    let physicalItems = [];
-    let physicsTimer = null;
-    let throwPowerMultiplier = 1.2;
-    let globalFrictionAir = 0.01;
+    // ---- 状态变量 ----
+    let physicalItems = [];        // 所有物理道具的引用数组
+    let physicsTimer = null;       // 物理循环定时器
+    let throwPowerMultiplier = 1.2; // 投掷力度倍率
+    let globalFrictionAir = 0.01;  // 全局空气阻力
 
-    let draggingItemId = null;
-    let dragOffset = { x: 0, y: 0 };
-    let dragVelocity = { x: 0, y: 0 };
+    // ---- 拖拽状态 ----
+    let draggingItemId = null;       // 当前拖拽中的道具 ID
+    let dragOffset = { x: 0, y: 0 }; // 鼠标与道具中心的偏移
+    let dragVelocity = { x: 0, y: 0 }; // 拖拽速度（用于松手后投掷）
 
+    // 启动物理循环（setInterval 方式，替代 Matter.Runner）
     function startPhysicsLoop(fps) {
         if (physicsTimer) clearInterval(physicsTimer);
         const intervalMs = 1000 / fps;
@@ -27,6 +38,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         physicsTimer = setInterval(() => {
             Engine.update(engine, intervalMs);
 
+            // ---- 拖拽中：实时跟随鼠标 ----
             if (draggingItemId) {
                 const item = physicalItems.find(i => i.id === draggingItemId);
                 if (item) {
@@ -44,6 +56,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
                 }
             }
 
+            // ---- 同步道具窗口位置/角度，越界检测 ----
             physicalItems.forEach(item => {
                 if (!item.window || item.window.isDestroyed()) return;
                 const { x, y } = item.body.position;
@@ -52,6 +65,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
                     item.window.close();
                     return;
                 }
+                // 速度/角速度过低时跳过同步，节省性能
                 const speed = Matter.Vector.magnitude(item.body.velocity);
                 const angularSpeed = Math.abs(item.body.angularVelocity);
                 if (!item.isDragging && speed < 0.1 && angularSpeed < 0.01) {
@@ -74,7 +88,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
     }
     startPhysicsLoop(60);
 
-    // ---- 物理墙壁 ----
+    // ---- 物理墙壁：地面、左墙、右墙、天花板 ----
     {
         const primaryDisplay = screen.getPrimaryDisplay();
         const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
@@ -90,7 +104,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         World.add(world, [ground, leftWall, rightWall, ceiling]);
     }
 
-    // ---- 图片管理 ----
+    // ---- IPC：获取可用物理道具图片列表 ----
     ipcMain.handle('get-physics-images', () => {
         const files = fs.readdirSync(physicsItemsDir);
         return files.filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f)).map(f => {
@@ -98,13 +112,14 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         });
     });
 
+    // ---- IPC：保存物理道具图片到 physics_items 目录 ----
     ipcMain.handle('save-physics-image', (event, sourcePath, fileName) => {
         const destPath = path.join(physicsItemsDir, fileName);
         fs.copyFileSync(sourcePath, destPath);
         return { name: fileName, path: destPath };
     });
 
-    // ---- 生成物理道具 ----
+    // ---- IPC：生成物理道具（创建独立 BrowserWindow + Matter.js 碰撞体） ----
     ipcMain.handle('spawn-physics-item', (event, data) => {
         const { id, imgUrl, startX, startY, size, bounce } = data;
 
@@ -176,7 +191,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         return true;
     });
 
-    // ---- 拖拽 ----
+    // ---- IPC：拖拽开始 - 记录偏移并设为静态（冻结物理） ----
     ipcMain.on('physics-drag-start', (event, id) => {
         const item = physicalItems.find(i => i.id === id);
         if (item) {
@@ -191,6 +206,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         }
     });
 
+    // ---- IPC：拖拽结束 - 恢复动态，施加拖拽速度 × 倍率作为投掷速度 ----
     ipcMain.on('physics-drag-end', (event, id) => {
         if (draggingItemId === id) {
             const item = physicalItems.find(i => i.id === id);
@@ -207,7 +223,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         }
     });
 
-    // ---- 参数 ----
+    // ---- IPC：更新物理参数（重力 / FPS / 投掷力度 / 空气阻力） ----
     ipcMain.on('update-physics-params', (event, params) => {
         if (params.gravity !== undefined) engine.gravity.y = params.gravity;
         if (params.fps !== undefined) startPhysicsLoop(params.fps);
@@ -220,6 +236,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         }
     });
 
+    // ---- IPC：缩放道具尺寸，按比例缩放 Matter.js 碰撞体 ----
     ipcMain.on('resize-physics-item', (event, id, newSize) => {
         const item = physicalItems.find(i => i.id === id);
         if (item && !item.window.isDestroyed()) {
@@ -230,11 +247,13 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         }
     });
 
+    // ---- IPC：移除单个物理道具（关闭窗口即触发 closed 事件清理） ----
     ipcMain.on('remove-physics-item', (event, id) => {
         const item = physicalItems.find(i => i.id === id);
         if (item && !item.window.isDestroyed()) item.window.close();
     });
 
+    // ---- IPC：清除所有物理道具 ----
     ipcMain.on('clear-all-physics', () => {
         physicalItems.forEach(item => {
             if (!item.window.isDestroyed()) item.window.close();
@@ -242,7 +261,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         physicalItems = [];
     });
 
-    // ---- UI 碰撞箱 ----
+    // ---- IPC：同步 UI 碰撞边界（渲染进程上报 UI 区域，主进程转为静态碰撞体） ----
     let uiBodies = {};
 
     ipcMain.on('update-ui-bodies', (event, boundsData) => {
@@ -292,8 +311,8 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win 
         });
     });
 
-    // ---- 形状切换 ----
-    const SHAPE_TYPES = ['circle', 'rectangle', 'octagon'];
+    // ---- IPC：切换物理道具形状（圆形 → 矩形 → 八边形 → 循环） ----
+    const SHAPE_TYPES = ['circle', 'rectangle', 'octagon'];  // 支持的三类形状
     ipcMain.on('physics-change-shape', (event, id) => {
         const item = physicalItems.find(i => i.id === id);
         if (!item || !item.body) return;

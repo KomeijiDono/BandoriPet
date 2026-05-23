@@ -1,11 +1,17 @@
 /**
  * ipad-chat.js — iPad LINE 群聊系统
- * 从 index.html 内联脚本提取，IIFE 模块化。
+ * IIFE 模块化。
+ *
+ * 核心功能：
+ *  - 模拟 LINE 聊天列表 + 聊天记录 UI
+ *  - 私聊 / 群聊双模式，群聊支持多角色 AI 自主发言
+ *  - 群管理：创建群组、踢人、邀请、防踢保护
+ *  - iPad 浮窗拖拽（initDraggable），位置/尺寸/缩放持久化
  *
  * 外部依赖 (typeof 守卫):
  *   window.CharactersConfig  — 角色配置
  *   window.BandoriIPC         — IPC 通信 (预留)
- *   addChatMessage            — 内联脚本定义的全局函数 (预留)
+ *   addChatMessage            — chat-api.js 的消息气泡函数 (预留)
  *   initDraggable             — drag-helper.js 统一拖拽
  */
 (function () {
@@ -18,7 +24,9 @@
   var initDraggable = (typeof initDraggable === 'function') ? initDraggable : null;
 
   // ======================== 私有状态 ========================
+  // ipadChatData: 所有聊天会话（私聊 + 群聊）的数据，每个元素 = { id, name, alias, isGroup, icon, members[], msg[], isKicked }
   var ipadChatData = [];
+  // currentIpadChatId: 当前活跃聊天 ID，用于决定展示哪个会话的历史
   var currentIpadChatId = null;
   var pendingGroupName = "";
   var promptCallback = null;
@@ -32,10 +40,12 @@
 
   // ======================== 核心函数 ========================
 
+  /** 页面加载后调用，渲染聊天列表和历史 */
   function initIpadChats() { renderIpadChatList(); renderIpadChatHistory(); }
 
   function getChatDisplayName(chat) { return chat.isGroup ? chat.name : (chat.alias || chat.name); }
 
+  /** 渲染左侧聊天列表：遍历 ipadChatData 生成列表项，高亮当前活跃聊天 */
   function renderIpadChatList() {
     var listContainer = document.getElementById('ipad-chat-list-container');
     listContainer.innerHTML = '';
@@ -63,6 +73,13 @@
     renderIpadChatList(); renderIpadChatHistory();
   }
 
+  /** 
+   * 渲染右侧聊天历史：根据 currentIpadChatId 找到对应会话，遍历 msg 数组渲染气泡
+   * - sys 消息：灰色居中系统提示
+   * - user 消息：右对齐绿色气泡
+   * - ai 消息：左对齐气泡（群聊模式带角色头像 + 昵称）
+   * - 被踢出时禁用输入区域
+   */
   function renderIpadChatHistory() {
     var historyEl = document.getElementById('ipad-chat-history');
     var titleEl = document.getElementById('current-chat-title');
@@ -114,6 +131,17 @@
     switchIpadChat(charId);
   }
 
+  /**
+   * 调用 AI API 获取群聊 / 私聊回复
+   * 
+   * 核心流程：
+   *  1. 构建对话历史（最近 15 条）
+   *  2. 构建 System Prompt（群聊：全员人设汇总 + 随机发言规则 + 踢人机制；私聊：单角色人设 + 昵称）
+   *  3. 发送请求（Gemini 路径：generateContent；OpenAI 类路径：chat/completions）
+   *  4. 解析回复：按行拆分，通过 "姓名: 内容" 格式识别发言成员，匹配角色图标
+   *  5. 处理 [KICK_USER] 踢人指令（受 anti_kick_enable 开关控制）
+   *  6. 失败时显示网络错误系统消息
+   */
   async function callChatAPI(chat, typingHint) {
     if (typingHint === undefined) typingHint = "发送中...";
     var historyEl = document.getElementById('ipad-chat-history');
@@ -123,6 +151,7 @@
       historyEl.scrollTop = historyEl.scrollHeight;
     }
 
+    // === 构建历史消息（最近 15 条），sys 消息伪装成 user 角色以保持上下文连贯 ===
     var chatHistory = chat.msg.slice(-15).map(function (m) {
       if (m.sender === 'user') return { role: 'user', content: m.text };
       if (m.sender === 'sys') return { role: 'user', content: '[系统消息]: ' + m.text };
@@ -132,9 +161,11 @@
 
     function getCharPrompt(id) { return localStorage.getItem('prompt_' + id) || (charactersConfig[id] ? charactersConfig[id].prompt : ""); }
 
+    // === 构建 System Prompt ===
     var systemPrompt = "";
 
     if (chat.isGroup) {
+      // 群聊模式：汇总所有成员的人设，注入随机发言 + 踢人 + 无视规则
       var activePersonas = "";
       chat.members.forEach(function (id) {
         if (charactersConfig[id]) {
@@ -143,6 +174,7 @@
       });
       systemPrompt = '你正在模拟名为"' + chat.name + '"的LINE群聊。向你发送消息的是玩家。群成员包括你扮演的以下角色：\n' + activePersonas + '\n【格式与互动规则】：\n1. 格式严格为"角色姓名: 回复内容"。禁止多余旁白和外语翻译。\n2. 【随机发言】：每次只挑选随机数量的最可能接话的人发言或者无人在意。\n3. 【逆向踢人】：如果玩家惹人厌，可以在回复中加 [KICK_USER] 。\n4. 如果大家都无视玩家，直接输出：[无回复]';
     } else {
+      // 私聊模式：单角色人设 + 备注昵称
       var aliasText = chat.alias ? '\n玩家给你在LINE上备注的昵称是："' + chat.alias + '"。' : "";
       systemPrompt = '你现在的身份是【' + chat.name + '】。' + aliasText + '\n你的性格设定如下：\n' + getCharPrompt(chat.id) + '\n【真实聊天模拟】：你正在和玩家私聊。如果不想理他直接输出：[无回复]';
     }
@@ -158,6 +190,7 @@
 
     try {
       var aiReply = "";
+      // === Gemini 路径：generateContent API，key 拼在 URL 上 ===
       if (activeAPI === "gemini") {
         var geminiHistory = chatHistory.map(function (msg) { return { role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] }; });
         var response = await fetch(API.url + API.key, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ system_instruction: { parts: [{ text: systemPrompt }] }, contents: geminiHistory }) });
@@ -181,6 +214,7 @@
         }
         return '[' + innerText + ']';
       });
+      // === 群聊模式按行拆分，每行格式 "角色名: 内容"；私聊直接加角色名前缀 ===
       var lines = chat.isGroup ? aiReply.split('\n') : [chat.name + ': ' + aiReply];
 
       var parsedMsgs = [];
@@ -194,6 +228,7 @@
 
         var sepIdx = line.indexOf(':'); if (sepIdx === -1) sepIdx = line.indexOf('：');
 
+        // === 成员识别：通过角色名模糊匹配 charactersConfig，获取正确的头像路径 ===
         if (sepIdx !== -1) {
           var speakerName = line.substring(0, sepIdx).trim();
           var rawReply = line.substring(sepIdx + 1).trim();
@@ -233,7 +268,8 @@
         if (msgData.isKickLine) {
           if (localStorage.getItem('anti_kick_enable') === 'true') {
             chat.msg.push({ sender: 'sys', text: '[系统警告] ' + msgData.speakerName + ' 试图将你移出群聊，但被拦截了！' });
-          } else {
+      } else {
+        // === OpenAI 类路径：chat/completions API，Bearer 鉴权 ===
             chat.isKicked = true; chat.msg.push({ sender: 'sys', text: msgData.speakerName + ' 将你移出了群聊。' });
           }
         }
@@ -249,6 +285,7 @@
     }
   }
 
+  /** 发送群聊消息：输入框 → msg 数组 → 刷新 UI → 调用 callChatAPI */
   function sendGroupMessage() {
     var inputEl = document.getElementById('ipad-user-input');
     var text = inputEl.value.trim();
@@ -260,6 +297,7 @@
     callChatAPI(chat, "发送中...");
   }
 
+  /** 创建乐队群聊：弹出命名对话框 → 成员选择界面 → 确认后创建群组并发送首条系统消息 */
   function createBandGroupChat() {
     document.getElementById('ipad-add-modal').style.display = 'none';
     showIpadPrompt("请输入群聊名称：", "新乐队群组", function (name) {
@@ -335,12 +373,14 @@
     }
   }
 
+  /** 从群组中踢出指定成员，刷新 UI 并触发 AI 提示 */
   function kickGroupMember(chatId, memberId) {
     var chat = ipadChatData.find(function (c) { return c.id === chatId; }); chat.members = chat.members.filter(function (id) { return id !== memberId; });
     chat.msg.push({ sender: 'sys', text: '你将 ' + charactersConfig[memberId].name + ' 移出了群聊。' });
     renderGroupManageLists(chat); renderIpadChatHistory(); callChatAPI(chat, "大家正在看系统消息...");
   }
 
+  /** 邀请成员加入群组，刷新 UI 并触发 AI 提示 */
   function inviteGroupMember(chatId, memberId) {
     var chat = ipadChatData.find(function (c) { return c.id === chatId; }); chat.members.push(memberId);
     chat.msg.push({ sender: 'sys', text: '你邀请了 ' + charactersConfig[memberId].name + ' 加入群聊。' });
@@ -373,7 +413,9 @@
     }
   });
 
-  // ======================== 拖拽初始化 ========================
+  // ======================== iPad 拖拽初始化 ========================
+  // 拖拽 iOS 状态栏来移动整个 iPad 浮窗，位置持久化到 localStorage
+  // 拖拽开始时加重阴影并设置 window.isIpadDragging = true（供穿透检测使用）
   var ipadMenuDom = document.getElementById('group-chat-menu');
   var ipadHeader = document.getElementById('ipad-ios-status-bar');
 

@@ -1,11 +1,11 @@
 /**
  * weather.js — 天气 API 获取
- * 从 index.html 内联脚本抽离
  * 依赖：fetchWeather 函数 + DOM 元素 weather-text
  */
 (function () {
   'use strict';
 
+  // 通过IP地理定位获取经纬度 → 调用Open-Meteo免费天气API → 渲染天气信息
   async function fetchWeather() {
     var weatherEl = document.getElementById('weather-text');
     if (!weatherEl) return;
@@ -34,14 +34,15 @@
       var svgStart = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; flex-shrink: 0;">';
       var svgEnd = '</svg>';
 
+      // WMO天气码 → SVG图标 + 中文描述映射
       var desc = "未知";
       var svgIcon = "";
 
-      if (code === 0) {
+      if (code === 0) {// 晴朗
         desc = "晴朗";
         svgIcon = svgStart + '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>' + svgEnd;
       }
-      else if (code === 1 || code === 2 || code === 3) {
+      else if (code === 1 || code === 2 || code === 3) {// 多云/阴天
         desc = code === 3 ? "阴天" : "多云";
         svgIcon = svgStart + '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>' + svgEnd;
       }

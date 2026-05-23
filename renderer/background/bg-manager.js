@@ -1,7 +1,6 @@
 /**
  * bg-manager.js — 背景管理系统
  * 背景模式切换、高级背景图层、自定义背景图、视频背景
- * 从 index.html 内联脚本抽离
  * 依赖：window.initParticles（由 particles.js 暴露）、window.app（PIXI Application）
  */
 (function () {
@@ -12,6 +11,7 @@
   var bgDisplay = document.getElementById('bg-path-display');
 
   // ========== 背景模式切换 ==========
+  // 背景模式切换：透明/纯色/粒子/视频/高级图层，控制各级元素显示隐藏 + 持久化 mode
   function applyBgMode() {
     var modeSelect = document.getElementById('bg-mode');
     var mode = modeSelect ? modeSelect.value : (localStorage.getItem('anon_bg_mode') || 'transparent');
@@ -64,6 +64,7 @@
   }
 
   // ========== 粒子设置 ==========
+  // 粒子参数变更时持久化并重新初始化粒子系统
   function applyParticleSettings() {
     localStorage.setItem('p_color', document.getElementById('p-color').value);
     localStorage.setItem('p_count', document.getElementById('p-count').value);
@@ -73,6 +74,7 @@
   }
 
   // ========== 自定义背景图 ==========
+  // 将本地图片路径设为 app-background 的 backgroundImage
   function applyCustomBg(imgPath) {
     if (appBg) appBg.style.backgroundImage = "url('" + imgPath + "')";
     if (bgDisplay) {
@@ -81,6 +83,7 @@
     }
   }
 
+  // 清除自定义背景，移除 localStorage 记录
   function clearBackground() {
     localStorage.removeItem('custom_background');
     if (appBg) appBg.style.backgroundImage = '';
@@ -117,6 +120,7 @@
   });
 
   // ========== 高级背景图层 ==========
+  // 高级背景图层：渐变/图案/线条动画 + 文字叠加，速度值反转使滑块右滑变快
   function updateAdvancedBG() {
     var layerGrad = document.getElementById('bg-layer-gradient');
     var layerPat = document.getElementById('bg-layer-pattern');

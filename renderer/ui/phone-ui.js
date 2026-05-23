@@ -7,6 +7,7 @@
 
   var smartphoneUI, phoneHeader;
 
+  // 初始化手机 UI：从 localStorage 恢复位置/尺寸，注册手机和背景文字层拖拽
   function initPhoneUI() {
     smartphoneUI = document.getElementById('smartphone-ui');
     phoneHeader = document.getElementById('phone-header');
@@ -48,6 +49,7 @@
     }
   }
 
+  // 根据角色 ID 更新手机壁纸（优先 png，回退 jpg，最终渐变背景）
   function updatePhoneBackground(charId) {
     var charactersConfig = window.CharactersConfig;
     var charName = (charactersConfig && charactersConfig[charId]) ? charactersConfig[charId].name : 'MyGO!!!!!';
@@ -69,6 +71,7 @@
     smartphoneUI.style.backgroundImage = "url('model/" + charId + "/" + bgFileName + "'), linear-gradient(135deg, #ffb6c1 0%, #87ceeb 100%)";
   }
 
+  // 切换手机 UI 可见性，持久化到 localStorage
   function toggleSmartphone() {
     var show = document.getElementById('show-smartphone');
     if (!show) return;

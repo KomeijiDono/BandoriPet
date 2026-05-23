@@ -10,12 +10,11 @@
 
   var ipcRenderer = require('electron').ipcRenderer;
 
-  /** @type {Map<string, Array<function>>} */
+  // 已注册的监听器映射表：channel → callback[]
   var _handlers = {};
 
-  /** @type {Map<string, function>} IPC 单向回调（invoke 的临时监听器） */
+  // invoke 临时回调（保留接口，当前已改用 ipcRenderer.invoke）
   var _invokeCallbacks = {};
-
   var _invokeSeq = 0;
 
   // ============================================================
@@ -66,7 +65,7 @@
   ];
 
   // ============================================================
-  // send — 发送消息到主进程（无返回值）
+  // send — 单向发送消息到主进程（无返回值）
   // ============================================================
 
   function send(channel, data) {
@@ -74,7 +73,7 @@
   }
 
   // ============================================================
-  // invoke — 调用主进程并等待返回值
+  // invoke — 双向调用，发送并等待主进程返回 Promise
   // ============================================================
 
   function invoke(channel, data) {
@@ -82,21 +81,21 @@
   }
 
   // ============================================================
-  // on — 注册主进程消息监听
+  // on — 注册持久监听，同时记录到 _handlers 供本地管理
   // ============================================================
 
   function on(channel, callback) {
     if (!_handlers[channel]) _handlers[channel] = [];
     _handlers[channel].push(callback);
     ipcRenderer.on(channel, function (event) {
-      // 把 event 之后的所有参数传给回调
+      // 去掉 event 参数，只传业务数据给回调
       var args = Array.prototype.slice.call(arguments, 1);
       callback.apply(null, args);
     });
   }
 
   // ============================================================
-  // once — 一次性监听
+  // once — 一次性监听，触发后自动移除
   // ============================================================
 
   function once(channel, callback) {
@@ -107,7 +106,7 @@
   }
 
   // ============================================================
-  // off — 移除监听
+  // off — 移除指定通道上的某个回调
   // ============================================================
 
   function off(channel, callback) {
@@ -118,7 +117,7 @@
   }
 
   // ============================================================
-  // removeAllListeners — 移除某通道全部监听
+  // removeAllListeners — 清空某通道的全部监听
   // ============================================================
 
   function removeAllListeners(channel) {

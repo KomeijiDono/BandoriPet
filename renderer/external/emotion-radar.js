@@ -1,7 +1,6 @@
 /**
  * emotion-radar.js — 情绪雷达 WebSocket
  * 连接 ws://localhost:8765 监听情绪事件，触发语音播报
- * 从 index.html 内联脚本抽离
  */
 (function () {
   'use strict';
@@ -17,6 +16,7 @@
       var data = JSON.parse(event.data);
       if (isRadarActive) return;
 
+      // 暴怒检测 → 随机抽取一条吐槽语音
       var voiceLines = [
         { text: "[surprise] 哇！打个游戏而已，别这么大火气嘛！", lang: "zh" },
         { text: "[sad] 又在口吐芬芳了……别气别气，深呼吸！", lang: "zh" },
@@ -38,6 +38,7 @@
       }
     };
     radarSocket.onclose = function () {
+      // WebSocket断线后10秒自动重连
       setTimeout(connectEmotionRadar, 10000);
     };
   }

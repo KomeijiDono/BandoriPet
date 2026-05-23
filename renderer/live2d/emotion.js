@@ -1,10 +1,11 @@
 /**
  * emotion.js — Live2D 表情/动作映射与管理
- * 从 index.html 内联脚本抽离
+ * 提供：表情→动作映射表、标签别名、标签解析、资源匹配、表情应用
  */
 (function () {
   'use strict';
 
+  // 核心情绪映射：情绪标签 → 候选表情(motions)和动作(expressions)列表
   var LIVE2D_EMOTION_MAP = {
     normal:     { expressions: ['default','normal','idle01','idle'], motions: ['idle01','idle02','idle','nf01','f01'] },
     happy:      { expressions: ['smile01','smile02','smile03','happy','kandou','special01','special02','default','surprised'], motions: ['smile01','smile02','smile03','gattsu01','jaan01','kime01','happy01','happy02','smile','gattsu','kandou'] },
@@ -19,6 +20,7 @@
     touch:      { expressions: ['surprised','shame01','worry2','smile01','default'], motions: ['surprised01','shame01','smile01','kime01','nf01'] }
   };
 
+  // 标签别名表：将各种原始标签统一归并到标准情绪类别
   var LIVE2D_TAG_ALIASES = {
     default: 'normal', idle: 'normal', normal: 'normal', f: 'normal',
     happy: 'happy', smile: 'happy', wink: 'happy', kandou: 'happy', kime: 'happy',
@@ -30,10 +32,12 @@
     bye: 'bye', sing: 'sing', touch: 'touch', tap: 'touch'
   };
 
+  // 获取当前 Live2D 模型实例（优先从 window.live2dPet）
   function getLive2DModel() {
     return window.live2dPet || window.live2dModel || null;
   }
 
+  // 将原始标签标准化：去角色前缀、去数字后缀、查别名表、关键字推断 → 标准情绪标签
   function normalizeEmotionTag(rawTag) {
     var charactersConfig = window.CharactersConfig;
     var tag = String(rawTag || '').toLowerCase().trim();
@@ -57,6 +61,7 @@
     return '';
   }
 
+  // 从 AI 回复文本中提取 [tag] / 【tag】 标记，最多3个；无标记时用关键词推断
   function extractEmotionTags(replyText) {
     var tags = [];
     var seen = {};
@@ -81,6 +86,7 @@
     return ['normal'];
   }
 
+  // 展开候选名：纯名追加 charId_ 前缀变体，提高匹配命中率
   function expandExpressionCandidates(names, charId) {
     var candidates = [];
     names.forEach(function (name) {
@@ -91,6 +97,7 @@
     return candidates;
   }
 
+  // 标准化资源名：去扩展名、去数字后缀、去角色前缀 → 用于模糊匹配
   function normalizeResourceName(name) {
     var charactersConfig = window.CharactersConfig;
     var value = String(name || '').toLowerCase()
@@ -103,6 +110,7 @@
     return value;
   }
 
+  // 从候选列表中选出实际可用的资源名：精确匹配优先，否则模糊匹配
   function pickAvailableName(candidates, availableNames) {
     if (!availableNames || availableNames.size === 0) return candidates[0] || '';
     var direct = candidates.find(function (name) { return availableNames.has(name); });
@@ -121,6 +129,7 @@
     return '';
   }
 
+  // 根据情绪标签应用表情+动作到模型（通用版，可传入外部 model/名称集）
   function applyLive2DEmotion(tag, charId, model, motionNames, expressionNames) {
     model = model || getLive2DModel();
     if (!model) return;
@@ -137,6 +146,7 @@
     }
   }
 
+  // 直接按名称应用一对表情+动作（供点击反馈等场景使用）
   function applyLive2DResourcePair(expressionName, motionName, model) {
     model = model || getLive2DModel();
     if (!model) return;

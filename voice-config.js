@@ -1,4 +1,6 @@
+// GSV 语音模型路径配置文件，涵盖所有角色的 SoVITS/GPT 权重及参考音频
 const voiceConfigs = {
+    // ========== MyGO!!!!! ==========
     "anon": {
         pth: "SoVITS_weights_v2ProPlus/MyGO_千早爱音_v2pp.pth",
         ckpt: "GPT_weights_v2ProPlus/MyGO_千早爱音_v2pp.ckpt",
@@ -29,6 +31,7 @@ const voiceConfigs = {
         refAudio: "output/rana/抹茶生地に抹茶クリームと抹茶アイスと抹茶チョコ。仕上げにたっぷり抹茶ソース。.mp3",               
         refText: "抹茶生地に抹茶クリームと抹茶アイスと抹茶チョコ。仕上げにたっぷり抹茶ソース。"
     },
+    // ========== Mujica ==========
     "sakiko": {
         pth: "SoVITS_weights_v2ProPlus/Mujica_豊川祥子_白_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/Mujica_豊川祥子_白_v2pp.ckpt",   
@@ -59,6 +62,7 @@ const voiceConfigs = {
         refAudio: "output/nyamu/(A)仕切るわりには、責任はサキコに取らすようなしゃべり方しかしてなかったもんねー.wav",               
         refText: "仕切るわりには、責任はサキコに取らすようなしゃべり方しかしてなかったもんねー"
     },
+    // ========== Roselia ==========
     "yukina": {
         pth: "SoVITS_weights_v2ProPlus/Roselia_湊友希那_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/Roselia_湊友希那_v2pp.ckpt",   
@@ -71,6 +75,7 @@ const voiceConfigs = {
         refAudio: "output/mana/現場の雰囲気もいいし、優しくて頼れるお姉さんって感じでね。今日も仕事終わりにご飯行く約束してるんだ.wav",               
         refText: "現場の雰囲気もいいし、優しくて頼れるお姉さんって感じでね。今日も仕事終わりにご飯行く約束してるんだ"
     },
+    // ========== Poppin'Party ==========
     "kasumi": {
         pth: "SoVITS_weights_v2ProPlus/ppp_戸山香澄_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/ppp_戸山香澄_v2pp.ckpt",   
@@ -101,6 +106,7 @@ const voiceConfigs = {
         refAudio: "output/saaya/そういうワクワクを、素直に追いかけられるようになったのも……ポピパに、香澄に出会えたからだよ.mp3",               
         refText: "そういうワクワクを、素直に追いかけられるようになったのも……ポピパに、香澄に出会えたからだよ"
     },
+    // ========== Pastel*Palettes ==========
     "aya": {
         pth: "SoVITS_weights_v2ProPlus/パスパレ_丸山彩_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/パスパレ_丸山彩_v2pp.ckpt",   
@@ -131,6 +137,7 @@ const voiceConfigs = {
         refAudio: "output/chisato/それじゃあ、仕事に使った荷物もあることだし、各自準備ができたら、ショッピングモールに集まりましょう.mp3",               
         refText: "それじゃあ、仕事に使った荷物もあることだし、各自準備ができたら、ショッピングモールに集まりましょう"
     },
+    // ========== Roselia（续） ==========
     "ako": {
         pth: "SoVITS_weights_v2ProPlus/Roselia_宇田川亚子_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/Roselia_宇田川亚子_v2pp.ckpt",   
@@ -155,6 +162,7 @@ const voiceConfigs = {
         refAudio: "output/lisa/アタシもピンうさのファン第一号として応援してるよ。じゃ、アタシ自主練あるからこれで.mp3",               
         refText: "アタシもピンうさのファン第一号として応援してるよ。じゃ、アタシ自主練あるからこれで"
     },
+    // ========== Hello, Happy World! ==========
     "kokoro": {
         pth: "SoVITS_weights_v2ProPlus/HHW_弦卷心_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/HHW_弦卷心_v2pp.ckpt",   
@@ -185,6 +193,7 @@ const voiceConfigs = {
         refAudio: "output/misaki/この前借りたノート、まだ返してなかったから。そろそろ期末テストも近づいてきたし。はいこれ、ありがと.mp3",               
         refText: "この前借りたノート、まだ返してなかったから。そろそろ期末テストも近づいてきたし。はいこれ、ありがと"
     },
+    // ========== Afterglow ==========
     "ran": {
         pth: "SoVITS_weights_v2ProPlus/Afterglow_美竹蘭_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/Afterglow_美竹蘭_v2pp.ckpt",   
@@ -215,6 +224,7 @@ const voiceConfigs = {
         refAudio: "output/tsugumi/いえいえ、そんなことないです！昔の私だったら、緊張しちゃってよくない空気に飲まれちゃってたかもしれないです.mp3",               
         refText: "いえいえ、そんなことないです！昔の私だったら、緊張しちゃってよくない空気に飲まれちゃってたかもしれないです"
     },
+    // ========== RAISE A SUILEN ==========
     "rei": {
         pth: "SoVITS_weights_v2ProPlus/RAS_LAYER_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/RAS_LAYER_v2pp.ckpt",   
@@ -245,6 +255,7 @@ const voiceConfigs = {
         refAudio: "output/chu2/(A)ミラドリも、かつては熱い志を持ったバンドだったみたいね。強い想いがなければ、プロになんてなれないわ.mp3",               
         refText: "ミラドリも、かつては熱い志を持ったバンドだったみたいね。強い想いがなければ、プロになんてなれないわ"
     },
+    // ========== Morfonica ==========
     "mashiro": {
         pth: "SoVITS_weights_v2ProPlus/モニカ_倉田真白_v2pp.pth",  
         ckpt: "GPT_weights_v2ProPlus/モニカ_倉田真白_v2pp.ckpt",   
