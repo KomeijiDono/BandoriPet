@@ -1,6 +1,7 @@
 node_modules/
-model/
-physics_items/
+
+model/*
+physics_items/*
 
 __pycache__/
 *.pyc

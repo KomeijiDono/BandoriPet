@@ -1,6 +1,6 @@
 {
-  "name": "bandori-desktop-pet-append",
-  "version": "2.0.0-append",
+  "name": "bandori-desktop-pet",
+  "version": "2.1.3",
   "description": "Bandori Desktop Pet ~Voice Append~",
   "main": "main.js",
   "scripts": {
@@ -8,16 +8,20 @@
     "build": "electron-builder --win --x64"
   },
   "build": {
-    "appId": "moe.chihayadesuwa.bandori.pet.append",
+    "appId": "bandori.pet.append",
     "productName": "BandoriPet Voice Append",
+    "copyright": "Copyright © 2026 KomeijiDono & 千早ですわ",
     "directories": {
       "output": "dist"
     },
     "files": [
-      "**/*"
+      "**/*",
+      "!model/**/*",
+      "!physics_items/**/*"
     ],
     "win": {
-      "target": "dir"
+      "target": "dir",
+      "icon": "icon.ico"
     },
     "asar": false
   },
@@ -29,10 +33,19 @@
   },
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "rcedit": "^5.0.1"
   },
   "author": {
-    "name": "千早ですわ",
-    "email": "827677473@qq.com"
-  }
+    "name": "KomeijiDono",
+    "email": "564449138@qq.com",
+    "url": "https://github.com/KomeijiDono"
+  },
+  "contributors": [
+    {
+      "name": "千早ですわ",
+      "email": "827677473@qq.com",
+      "url": "https://github.com/Anokianx"
+    }
+  ]
 }
