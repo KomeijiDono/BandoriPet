@@ -12,7 +12,7 @@
   var currentLive2dMotionList = [];                   // 动作名列表（已排序）
   var currentLive2dExpressionList = [];               // 表情名列表（已排序）
   var voiceEmotionTimers = [];                        // 语音情绪定时器句柄
-  var lastLive2DClickAt = 0;                          // 上次点击时间戳（防连点）
+  var lastLive2DClickAt = 0;                          // 上次点击时间戳
   var lastLive2DClickMotionName = '';                 // 上次点击使用的动作名
   var lastLive2DClickExpressionName = '';             // 上次点击使用的表情名
 
@@ -91,13 +91,16 @@
     return source[Math.floor(Math.random() * source.length)] || '';
   }
 
-  // 点击反馈：随机播放表情+动作，700ms 防连点，2.4s 后恢复 neutral
+  // 点击反馈，2.4秒后恢复，取消连点限制
   function playLive2DClickFeedback() {
     if (!live2dModel) return;
     if (typeof window.modelDragMoved !== 'undefined' && window.modelDragMoved) return;
-    if (Date.now() - lastLive2DClickAt < 700) return;
-    lastLive2DClickAt = Date.now();
+
     var charId = localStorage.getItem('current_char') || 'anon';
+    var now = Date.now();
+
+    // 点击随机播放表情+动作
+    lastLive2DClickAt = now;
     var maxCount = Math.max(currentLive2dMotionList.length, currentLive2dExpressionList.length);
     if (maxCount > 0) {
       var motionName = pickRandomLive2DName(currentLive2dMotionList, lastLive2DClickMotionName);
