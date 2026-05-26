@@ -238,10 +238,7 @@
             </div>
             <div class="setting-row" style="margin-top: 5px;">
                 <label>模型 ID：</label>
-                <div class="api-model-wrapper">
-                    <input type="text" id="api-model" style="width: 140px;" placeholder="模型名称" autocomplete="off">
-                    <div id="api-model-dropdown" class="api-model-dropdown"></div>
-                </div>
+                <input type="text" id="api-model" style="width: 140px;" placeholder="模型名称" autocomplete="off">
                 <button id="btn-fetch-models" style="padding: 2px 6px; border: none; background: #5aa1e3; color: white; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; margin-left: 2px; white-space: nowrap;" title="根据当前 API URL 和 Key 自动获取可用模型列表">获取</button>
             </div>
             <div class="setting-row" style="margin-top: 5px; justify-content: flex-end;">
@@ -616,7 +613,8 @@
             <button id="btn-save" onclick="saveSettings()">应用并保存</button>
         </div>
     </div>
-
+    <!-- 选择模型的下拉菜单单独用fixed定位 -->
+    <div id="api-model-dropdown" class="api-model-dropdown"></div>
     <div id="group-chat-menu" style="display: none;">
         <div class="ipad-screen">
             <div id="ipad-ios-status-bar" style="height: 24px; padding: 0 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 12px; font-weight: bold; color: #000; z-index: 10; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
@@ -1021,5 +1019,7 @@
         }
 
     </script>
+    <!-- 这是模型ID的下拉框，使用fixed定位 -->
+    <div id="api-model-dropdown" class="api-model-dropdown"></div>
 </body>
 </html>

@@ -475,12 +475,8 @@
         }
         .setting-row select { width: 140px; }
 
-        .api-model-wrapper { position: relative; display: inline-block; }
-
         .api-model-dropdown {
-            position: absolute; top: calc(100% + 4px);; left: 0;
-            width: 100%;
-            box-sizing: border-box;
+            position: fixed; 
             max-height: 240px; overflow-y: auto; overflow-x: hidden;
             background: #fff; border: 1px solid #ffb6c1; border-radius: 6px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000;

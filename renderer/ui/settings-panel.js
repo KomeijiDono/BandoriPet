@@ -171,6 +171,16 @@
 
   var allModels = [];
 
+  function positionDropdown() {
+    var input = document.getElementById('api-model');
+    var dropdown = document.getElementById('api-model-dropdown');
+    if (!input || !dropdown) return;
+    var rect = input.getBoundingClientRect();
+    dropdown.style.left = rect.left + 'px';
+    dropdown.style.top = (rect.bottom + 4) + 'px';
+    dropdown.style.width = rect.width + 'px';
+  }
+
   function buildDropdownItems(models) {
     var dropdown = document.getElementById('api-model-dropdown');
     if (!dropdown) return;
@@ -204,6 +214,13 @@
       }
     });
     dropdown.classList[any ? 'add' : 'remove']('show');
+  }
+
+  function showDropdown() {
+    var dropdown = document.getElementById('api-model-dropdown');
+    if (!dropdown) return;
+    positionDropdown();
+    dropdown.classList.add('show');
   }
 
   // 自动获取模型列表
@@ -244,8 +261,7 @@
       } else {
         allModels = models;
         buildDropdownItems(models);
-        var dropdown = document.getElementById('api-model-dropdown');
-        if (dropdown) dropdown.classList.add('show');
+        showDropdown();
         alert('成功获取 ' + models.length + ' 个模型');
       }
 
@@ -265,10 +281,13 @@
     var dropdown = document.getElementById('api-model-dropdown');
     if (!input || !dropdown) return;
 
+    window.addEventListener('resize', positionDropdown);
+    window.addEventListener('scroll', positionDropdown, true);
+
     input.addEventListener('focus', function () {
       if (allModels.length > 0) {
         buildDropdownItems(allModels);
-        dropdown.classList.add('show');
+        showDropdown();
       }
     });
 
