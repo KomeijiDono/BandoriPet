@@ -89,6 +89,16 @@
     var charId = localStorage.getItem('current_char') || 'anon';
     var charactersConfig = window.CharactersConfig;
     var CURRENT_PROMPT = localStorage.getItem('prompt_' + charId) || (charactersConfig && charactersConfig[charId] ? charactersConfig[charId].prompt : '');
+
+    var personaMode = localStorage.getItem('persona_mode') || 'concise';
+    var personaText = '';
+    if (typeof window.buildCharacterPersona === 'function') {
+      var built = window.buildCharacterPersona(charId, personaMode);
+      if (built) personaText = built;
+    }
+    if (personaText) {
+      CURRENT_PROMPT = CURRENT_PROMPT.replace(/^([^【\n]+)/, '$1\n\n' + personaText);
+    }
     inputElement.value = '';
     addChatMessage(text, 'user');
     addChatMessage("对方正在输入...", 'typing');
