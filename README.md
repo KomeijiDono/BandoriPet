@@ -57,6 +57,7 @@ BandoriPet/
 │   ├── avatar.png
 │   ├── click.mp3
 │   └── styles/main.css
+├── characters/                ← 角色人设数据
 ├── native/                    ← C++原生文件
 │   ├── sys_audio.exe/.cpp/.obj
 │   └── set_wallpaper.cpp
