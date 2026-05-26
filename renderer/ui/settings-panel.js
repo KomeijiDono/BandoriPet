@@ -5,6 +5,15 @@
 (function () {
   'use strict';
 
+  var defaultApiConfigs = {
+    "deepseek": { url: "https://api.deepseek.com/v1/chat/completions", key: "", model: "deepseek-chat" },
+    "gemini":   { url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=", key: "", model: "gemini-3.1-flash-lite" },
+    "openai":   { url: "https://api.openai.com/v1/chat/completions", key: "", model: "gpt-5.4-2026-03-05" },
+    "qwen":     { url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", key: "", model: "qwen3.6-max-preview" }
+  };
+  var currentApiConfigs = {};
+  var activePreset = 'deepseek';
+
   // 切换设置面板显示/隐藏，打开时从 localStorage 恢复所有字段值
   function toggleSettings() {
     var panel = document.getElementById('settings-panel');
@@ -17,7 +26,23 @@
       document.getElementById('c-date').value = localStorage.getItem('c_date') || '#555555';
       document.getElementById('c-greeting').value = localStorage.getItem('c_greeting') || '#777777';
       document.getElementById('c-weather').value = localStorage.getItem('c_weather') || '#5aa1e3';
-      document.getElementById('api-preset').value = localStorage.getItem('api_preset') || 'deepseek';
+
+      activePreset = localStorage.getItem('api_preset') || 'deepseek';
+      document.getElementById('api-preset').value = activePreset;
+
+      // 加载 API 持久化配置
+      currentApiConfigs = JSON.parse(localStorage.getItem('api_configs')) || {};
+      // 补全由于版本升级或未配置导致的默认值
+      for (var k in defaultApiConfigs) {
+        if (!currentApiConfigs[k]) {
+          currentApiConfigs[k] = Object.assign({}, defaultApiConfigs[k]);
+        }
+      }
+      var config = currentApiConfigs[activePreset] || { url: '', key: '', model: '' };
+      document.getElementById('api-url').value = config.url || '';
+      document.getElementById('api-key').value = config.key || '';
+      document.getElementById('api-model').value = config.model || '';
+
       document.getElementById('set-phone-w').value = localStorage.getItem('phone_w') || 320;
       document.getElementById('set-phone-h').value = localStorage.getItem('phone_h') || 500;
       document.getElementById('set-phone-scale').value = localStorage.getItem('phone_scale') || 1.0;
@@ -48,6 +73,14 @@
     localStorage.setItem('phone_scale', phoneScale);
     localStorage.setItem('api_preset', apiPreset);
 
+    // 保存当前输入框的 API 配置
+    currentApiConfigs[apiPreset] = {
+      url: document.getElementById('api-url').value.trim(),
+      key: document.getElementById('api-key').value.trim(),
+      model: document.getElementById('api-model').value.trim()
+    };
+    localStorage.setItem('api_configs', JSON.stringify(currentApiConfigs));
+
     toggleSettings();
     if (typeof addChatMessage === 'function') addChatMessage("控制台设置应用并保存好啦！", 'ai');
 
@@ -59,6 +92,108 @@
       }, 3000);
     }
   }
+
+  // 测试连接
+  async function testApiConnection() {
+    var testBtn = document.getElementById('btn-test-api');
+    if (!testBtn) return;
+
+    var originalText = testBtn.innerText;
+    testBtn.innerText = "测试中...";
+    testBtn.disabled = true;
+    testBtn.style.background = "#aaa";
+
+    var url = document.getElementById('api-url').value.trim();
+    var key = document.getElementById('api-key').value.trim();
+    var model = document.getElementById('api-model').value.trim();
+    var preset = document.getElementById('api-preset').value;
+
+    if (!url) {
+      alert("请输入 API URL！");
+      testBtn.innerText = originalText;
+      testBtn.disabled = false;
+      testBtn.style.background = "#5aa1e3";
+      return;
+    }
+
+    try {
+      var response;
+      if (preset === "gemini") {
+        var testUrl = url + key;
+        response = await fetch(testUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: 'hi' }] }]
+          })
+        });
+      } else {
+        var headers = { "Content-Type": "application/json" };
+        if (key) {
+          headers["Authorization"] = 'Bearer ' + key;
+        }
+        response = await fetch(url, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: 'hi' }],
+            max_tokens: 5
+          })
+        });
+      }
+
+      var data = await response.json();
+      if (!response.ok || data.error) {
+        var errMsg = (data.error && data.error.message) || response.statusText || "未知错误";
+        throw new Error(errMsg);
+      }
+
+      testBtn.innerText = "成功 ✔";
+      testBtn.style.background = "#2ed573";
+      setTimeout(function () {
+        testBtn.innerText = originalText;
+        testBtn.disabled = false;
+        testBtn.style.background = "#5aa1e3";
+      }, 2000);
+
+    } catch (err) {
+      testBtn.innerText = "失败 ✘";
+      testBtn.style.background = "#ff4757";
+      alert("API 测试连接失败，错误详情:\n" + err.message);
+      setTimeout(function () {
+        testBtn.innerText = originalText;
+        testBtn.disabled = false;
+        testBtn.style.background = "#5aa1e3";
+      }, 2000);
+    }
+  }
+
+  // 绑定 API 切换和测试按钮事件
+  setTimeout(function () {
+    var presetSelect = document.getElementById('api-preset');
+    if (presetSelect) {
+      presetSelect.addEventListener('change', function () {
+        if (activePreset) {
+          currentApiConfigs[activePreset] = {
+            url: document.getElementById('api-url').value.trim(),
+            key: document.getElementById('api-key').value.trim(),
+            model: document.getElementById('api-model').value.trim()
+          };
+        }
+        activePreset = presetSelect.value;
+        var config = currentApiConfigs[activePreset] || { url: '', key: '', model: '' };
+        document.getElementById('api-url').value = config.url || '';
+        document.getElementById('api-key').value = config.key || '';
+        document.getElementById('api-model').value = config.model || '';
+      });
+    }
+
+    var testBtn = document.getElementById('btn-test-api');
+    if (testBtn) {
+      testBtn.addEventListener('click', testApiConnection);
+    }
+  }, 100);
 
   // 面板拖拽：通过标题栏 initDraggable 实现拖拽，设置拖拽状态标记
   setTimeout(function () {

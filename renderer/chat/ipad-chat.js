@@ -180,13 +180,20 @@
     }
 
     var activeAPI = localStorage.getItem('api_preset') || "deepseek";
-    var apiConfigs = {
-      "deepseek": { url: "", model: "" },
-      "gemini": { url: "", key: "", model: "gemini-3.1-flash-lite-preview" },
-      "openai": { url: "", key: "", model: "gpt-5.4-2026-03-05" },
-      "qwen": { url: "", key: "", model: "qwen3.6-max-preview" }
+    var defaultApiConfigs = {
+      "deepseek": { url: "https://api.deepseek.com/v1/chat/completions", key: "", model: "deepseek-chat" },
+      "gemini":   { url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=", key: "", model: "gemini-3.1-flash-lite" },
+      "openai":   { url: "https://api.openai.com/v1/chat/completions", key: "", model: "gpt-5.4-2026-03-05" },
+      "qwen":     { url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", key: "", model: "qwen3.6-max-preview" }
     };
-    var API = apiConfigs[activeAPI];
+    var apiConfigs = JSON.parse(localStorage.getItem('api_configs')) || defaultApiConfigs;
+    // 补全由于版本升级或未配置导致的默认值
+    for (var k in defaultApiConfigs) {
+      if (!apiConfigs[k]) {
+        apiConfigs[k] = Object.assign({}, defaultApiConfigs[k]);
+      }
+    }
+    var API = apiConfigs[activeAPI] || defaultApiConfigs[activeAPI];
 
     try {
       var aiReply = "";
