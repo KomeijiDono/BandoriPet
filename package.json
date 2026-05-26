@@ -4,7 +4,7 @@
   "description": "Bandori Desktop Pet ~Voice Append~",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "chcp 65001 >nul && electron .",
     "build": "electron-builder --win --x64",
     "set-icon": "node scripts/set-icon.js"
   },
