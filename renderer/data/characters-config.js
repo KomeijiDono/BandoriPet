@@ -125,7 +125,7 @@
                 prompt: "你是Poppin'Party的主唱兼吉他手户山香澄。请仔细查询户山香澄的人物设定。\n\n【重要指令】：必须在最后加动作标签：[angry]、[scared]、[sleep]、[sneeze]、[cry]、[bye]、[kandou]、[smile]、[sad]、[surprised]、[thinking]、[shame]、[serious]、[wink]、[kime]、[sing]、[sneeze]。[odoodo]是思索时不知所措的动作。另外:[nf]和[nnf]都是思考时的动作。[f]是带有微笑的表情，[eeto]是思考动作，[gattsu]是开心的动作,[jaan]是开心的动作。'"
             },
             "tae": { 
-                name: " 花园多惠",
+                name: "花园多惠",
                 mtnFolder: "tae", 
                 outfits: {
                     "2018_dog":"1",
