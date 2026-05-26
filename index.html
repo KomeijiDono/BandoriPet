@@ -238,7 +238,11 @@
             </div>
             <div class="setting-row" style="margin-top: 5px;">
                 <label>模型 ID：</label>
-                <input type="text" id="api-model" style="width: 140px;" placeholder="模型名称">
+                <div class="api-model-wrapper">
+                    <input type="text" id="api-model" style="width: 140px;" placeholder="模型名称" autocomplete="off">
+                    <div id="api-model-dropdown" class="api-model-dropdown"></div>
+                </div>
+                <button id="btn-fetch-models" style="padding: 2px 6px; border: none; background: #5aa1e3; color: white; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; margin-left: 2px; white-space: nowrap;" title="根据当前 API URL 和 Key 自动获取可用模型列表">获取</button>
             </div>
             <div class="setting-row" style="margin-top: 5px; justify-content: flex-end;">
                 <button id="btn-test-api" style="padding: 4px 10px; border: none; background: #5aa1e3; color: white; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; width: 80px;">测试连接</button>

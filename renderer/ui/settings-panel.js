@@ -169,6 +169,154 @@
     }
   }
 
+  var allModels = [];
+
+  function buildDropdownItems(models) {
+    var dropdown = document.getElementById('api-model-dropdown');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+    models.forEach(function (id) {
+      var item = document.createElement('div');
+      item.textContent = id;
+      item.setAttribute('data-value', id);
+      item.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        var inp = document.getElementById('api-model');
+        if (inp) inp.value = id;
+        dropdown.classList.remove('show');
+      });
+      dropdown.appendChild(item);
+    });
+  }
+
+  function filterDropdown(keyword) {
+    var kw = keyword.trim().toLowerCase();
+    var dropdown = document.getElementById('api-model-dropdown');
+    if (!dropdown) return;
+    var items = dropdown.querySelectorAll('div');
+    var any = false;
+    items.forEach(function (d) {
+      if (!kw || d.textContent.toLowerCase().indexOf(kw) !== -1) {
+        d.style.display = '';
+        any = true;
+      } else {
+        d.style.display = 'none';
+      }
+    });
+    dropdown.classList[any ? 'add' : 'remove']('show');
+  }
+
+  // 自动获取模型列表
+  async function fetchModelList() {
+    var btn = document.getElementById('btn-fetch-models');
+    if (!btn) return;
+    var originalText = btn.innerText;
+    btn.innerText = '获取中...';
+    btn.disabled = true;
+    btn.style.background = '#aaa';
+
+    var url = document.getElementById('api-url').value.trim();
+    var key = document.getElementById('api-key').value.trim();
+    var preset = document.getElementById('api-preset').value;
+
+    try {
+      var modelsUrl, headers = {}, models = [];
+
+      if (preset === 'gemini') {
+        modelsUrl = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + key;
+      } else {
+        modelsUrl = url.replace(/\/chat\/completions$/, '/models');
+        if (key) headers['Authorization'] = 'Bearer ' + key;
+      }
+
+      var response = await fetch(modelsUrl, { method: 'GET', headers: headers });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      var data = await response.json();
+
+      if (preset === 'gemini') {
+        if (data.models) models = data.models.map(function (m) { return m.name.replace('models/', ''); });
+      } else {
+        if (data.data) models = data.data.map(function (m) { return m.id; });
+      }
+
+      if (models.length === 0) {
+        alert('未获取到模型列表');
+      } else {
+        allModels = models;
+        buildDropdownItems(models);
+        var dropdown = document.getElementById('api-model-dropdown');
+        if (dropdown) dropdown.classList.add('show');
+        alert('成功获取 ' + models.length + ' 个模型');
+      }
+
+      btn.innerText = originalText;
+      btn.disabled = false;
+      btn.style.background = '#5aa1e3';
+    } catch (err) {
+      btn.innerText = originalText;
+      btn.disabled = false;
+      btn.style.background = '#5aa1e3';
+      alert('获取模型列表失败：' + err.message);
+    }
+  }
+
+  function initModelDropdown() {
+    var input = document.getElementById('api-model');
+    var dropdown = document.getElementById('api-model-dropdown');
+    if (!input || !dropdown) return;
+
+    input.addEventListener('focus', function () {
+      if (allModels.length > 0) {
+        buildDropdownItems(allModels);
+        dropdown.classList.add('show');
+      }
+    });
+
+    input.addEventListener('blur', function () {
+      setTimeout(function () { dropdown.classList.remove('show'); }, 150);
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
+    });
+
+    input.addEventListener('input', function () {
+      filterDropdown(input.value);
+    });
+
+    input.addEventListener('keydown', function (e) {
+      var items = Array.prototype.filter.call(dropdown.querySelectorAll('div'), function (d) { return d.style.display !== 'none'; });
+      if (!items.length || !dropdown.classList.contains('show')) return;
+
+      var active = dropdown.querySelector('div.active');
+      var idx = active ? items.indexOf(active) : -1;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (active) active.classList.remove('active');
+        idx = (idx + 1) % items.length;
+        items[idx].classList.add('active');
+        items[idx].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (active) active.classList.remove('active');
+        idx = idx <= 0 ? items.length - 1 : idx - 1;
+        items[idx].classList.add('active');
+        items[idx].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        if (active) {
+          e.preventDefault();
+          input.value = active.getAttribute('data-value');
+          dropdown.classList.remove('show');
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.classList.remove('show');
+      }
+    });
+  }
+
   // 绑定 API 切换和测试按钮事件
   setTimeout(function () {
     var presetSelect = document.getElementById('api-preset');
@@ -193,6 +341,13 @@
     if (testBtn) {
       testBtn.addEventListener('click', testApiConnection);
     }
+
+    var fetchBtn = document.getElementById('btn-fetch-models');
+    if (fetchBtn) {
+      fetchBtn.addEventListener('click', fetchModelList);
+    }
+
+    initModelDropdown();
   }, 100);
 
   // 面板拖拽：通过标题栏 initDraggable 实现拖拽，设置拖拽状态标记
