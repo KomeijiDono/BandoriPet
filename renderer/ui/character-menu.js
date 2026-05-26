@@ -163,8 +163,58 @@
       globalVolume = parseFloat(savedVol);
     }
 
+    updatePersonaDisplay(id);
+
     panel.classList.add('active');
   }
+
+  function updatePersonaDisplay(charId) {
+    var textarea = document.getElementById('persona-display');
+    var modeBtn = document.getElementById('persona-mode-btn');
+    if (!textarea) return;
+
+    var mode = localStorage.getItem('persona_mode') || 'concise';
+    if (modeBtn) modeBtn.innerText = mode === 'full' ? '完整' : '精简';
+
+    if (typeof window.getCharacterPersonaSummary !== 'function') {
+      textarea.value = '人格档案未加载';
+      return;
+    }
+
+    var summary = window.getCharacterPersonaSummary(charId, mode);
+    if (!summary) {
+      textarea.value = '暂无角色人格档案';
+      return;
+    }
+
+    if (mode === 'full' && summary.full) {
+      textarea.value = summary.full;
+    } else {
+      var lines = [];
+      if (summary.core) lines.push('【核心驱动力】\n' + summary.core);
+      if (summary.style) lines.push('【表达风格】\n' + summary.style);
+      if (summary.rules) lines.push('【行为规则】\n' + summary.rules);
+      textarea.value = lines.join('\n\n');
+    }
+    textarea.scrollTop = 0;
+  }
+
+  window.togglePersonaDisplay = function () {
+    var display = document.getElementById('persona-display');
+    var icon = document.getElementById('persona-expand-icon');
+    if (!display) return;
+    var isHidden = display.style.display === 'none' || display.style.display === '';
+    display.style.display = isHidden ? 'block' : 'none';
+    if (icon) icon.innerText = isHidden ? '[收起]' : '[展开]';
+  };
+
+  window.togglePersonaMode = function () {
+    var mode = localStorage.getItem('persona_mode') || 'concise';
+    mode = mode === 'full' ? 'concise' : 'full';
+    localStorage.setItem('persona_mode', mode);
+    var charId = localStorage.getItem('current_char') || 'anon';
+    updatePersonaDisplay(charId);
+  };
 
   // 关闭详情面板（移除 active 类）
   function closeDetailPanel() {
