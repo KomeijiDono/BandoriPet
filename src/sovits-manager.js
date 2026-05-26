@@ -3,7 +3,7 @@ let sovitsProcess = null;
 
 // 初始化 SoVITS 管理器，注入依赖：path, spawn, ipcMain, voiceConfigs
 // 返回 { getProcess, killProcess } 供外部控制进程生命周期
-function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs }) {
+function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT }) {
     // 根据角色 ID 启动对应语音引擎：查找配置 → 拼接 Python 路径 → spawn 子进程
     function startSoVITS(charId) {
         const config = voiceConfigs[charId];
@@ -12,7 +12,7 @@ function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs }) {
             return;
         }
 
-        const sovitsDir = path.join(__dirname, 'GPT-SoVITS'); 
+        const sovitsDir = path.join(ROOT, 'GPT-SoVITS'); 
         const pythonPath = path.join(sovitsDir, 'runtime', 'python.exe');
         
         const args = [
