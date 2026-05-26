@@ -16,4 +16,4 @@ function registerMediaControl({ ipcMain, exec }) {
     });
 }
 
-module.exports = registerMediaControl;
+module.exports = { registerMediaControl };

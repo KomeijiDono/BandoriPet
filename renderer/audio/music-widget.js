@@ -351,18 +351,22 @@
                     lipModel.customLipSyncInjected = true; 
                 }
             }
-            const charName = charactersConfig[charId] ? charactersConfig[charId].name : charId;
+            const cfg = window.CharactersConfig || window.charactersConfig || {};
+            const charName = cfg[charId] ? cfg[charId].name.trim() : charId;
             let apiUrl = `http://127.0.0.1:9880/?text=${encodeURIComponent(cleanText)}&text_language=${lang}&character=${encodeURIComponent(charName)}`;
-            
             try {
                 const response = await fetch(apiUrl);
+                console.log('[TTS] fetch response:', response.status, response.ok);
                 if (!response.ok) throw new Error(`API 请求失败`);
                 const audioBlob = await response.blob();
+                console.log('[TTS] blob received:', audioBlob.size, 'bytes, type:', audioBlob.type);
+
                 const blobUrl = URL.createObjectURL(audioBlob);
 
                 currentVoice = new Audio(blobUrl);
                 currentVoice.volume = globalVolume;
                 currentVoice.onplay = () => {
+                    console.log('[TTS] Audio started playing');
                     isFakeSpeaking = true;
                     startVoiceEmotionActions(emotionTags, charId, currentVoice);
                 };

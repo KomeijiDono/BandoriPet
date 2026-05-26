@@ -3,7 +3,7 @@ let sovitsProcess = null;
 
 // 初始化 SoVITS 管理器，注入依赖：path, spawn, ipcMain, voiceConfigs
 // 返回 { getProcess, killProcess } 供外部控制进程生命周期
-function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT }) {
+function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs }) {
     // 根据角色 ID 启动对应语音引擎：查找配置 → 拼接 Python 路径 → spawn 子进程
     function startSoVITS(charId) {
         const config = voiceConfigs[charId];
@@ -26,16 +26,28 @@ function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT }) {
         
         try {
             console.log(`正在后台唤醒 [${charId}] 的专属语音引擎...`);
+            if (!fs.existsSync(pythonPath)) {
+                console.error(`[SoVITS] Python 路径不存在: ${pythonPath}`);
+                return;
+            }
             sovitsProcess = spawn(pythonPath, args, {
                 cwd: sovitsDir,     
                 windowsHide: false   
             });
-            sovitsProcess.stdout.on('data', (data) => console.log(`[SoVITS] ${data}`));
+            sovitsProcess.stdout.on('data', (data) => {
+                var msg = data.toString();
+                console.log(`[SoVITS] ${msg}`);
+                if (msg.includes('Uvicorn running')) {
+                    if (ipcMain) ipcMain.emit('sovits-ready', null, charId);
+                }
+            });
             sovitsProcess.stderr.on('data', (data) => console.log(`[SoVITS 状态] ${data}`));
-            // 监听子进程异常错误，防止未捕获异常导致进程泄漏
-            sovitsProcess.on('error', (err) => console.error(`[SoVITS 错误]`, err));
+            sovitsProcess.on('error', (err) => {
+                console.error(`[SoVITS 错误]`, err);
+                sovitsProcess = null;
+                if (ipcMain) ipcMain.emit('sovits-error', null, charId);
+            });
             sovitsProcess.on('close', (code) => {
-                // 进程退出时复位引用，避免后续操作已退出的进程
                 console.log(`[SoVITS] 进程退出 (code: ${code})`);
                 sovitsProcess = null;
             });

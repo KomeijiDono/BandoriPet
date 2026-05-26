@@ -41,7 +41,7 @@ const { initPhysics } = require('./physics-engine');
 const { initGlobalShortcut } = require('./global-shortcut');
 
 // GSV 语音引擎管理器（返回 getProcess / killProcess 接口）
-const sovitsMgr = initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT });
+const sovitsMgr = initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs });
 
 // ============================================================
 //  App 就绪回调 — 创建窗口、组装所有子系统
