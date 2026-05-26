@@ -663,6 +663,10 @@
             box-shadow: 0 8px 20px rgba(255, 107, 129, 0.3);
         }
         .menu-save-btn:hover { transform: scale(1.02) translateY(-3px); box-shadow: 0 12px 25px rgba(255, 107, 129, 0.4); }
+
+        #persona-display::-webkit-scrollbar { width: 4px; }
+        #persona-display::-webkit-scrollbar-thumb { background: #ffb6c1; border-radius: 2px; }
+        #persona-mode-btn:hover { background: #ffb6c1; color: white; }
        
 
         input[type="checkbox"] {
