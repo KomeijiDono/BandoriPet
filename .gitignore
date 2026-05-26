@@ -2,6 +2,7 @@ node_modules/
 
 model/*
 physics_items/*
+GPT-SoVITS/*
 
 __pycache__/
 *.pyc
