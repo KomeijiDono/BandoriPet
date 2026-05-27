@@ -153,10 +153,17 @@
     DISPLAY_FPS_CHANGED:'display:fps-changed',
     GPU_CHANGED:        'display:gpu-changed',
 
-    // 情绪雷达
+    // 情绪雷达（旧 WebSocket 版，保留兼容）
     RADAR_EMOTION:   'radar:emotion',
     RADAR_CONNECT:   'radar:connect',
     RADAR_DISCONNECT:'radar:disconnect',
+
+    // 情绪引擎（新本地版）
+    EMOTION_UPDATED: 'emotion:updated',
+    EMOTION_CHANGED: 'emotion:changed',
+    EMOTION_ENGINE_START: 'emotion:engine-start',
+    EMOTION_ENGINE_STOP:  'emotion:engine-stop',
+    EMOTION_PANEL_TOGGLE: 'emotion:panel-toggle',
   };
 
   console.log('[Renderer] events.js 已就绪');

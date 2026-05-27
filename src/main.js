@@ -28,7 +28,7 @@ if (!useGPU) app.disableHardwareAcceleration();
 // ---- 全局状态变量 ----
 let tray = null;          // 系统托盘实例
 let win;                  // 主 BrowserWindow
-let radarProcess = null;  // 情绪雷达 Python 子进程
+let emotionEngine = null; // 情绪引擎管理接口
 
 // ---- 子模块 require + 初始化 ----
 const voiceConfigs = require('./voice-config');
@@ -39,6 +39,7 @@ const { initAudioCapture } = require('./audio-capture');
 const { registerMediaControl } = require('./media-control');
 const { initPhysics } = require('./physics-engine');
 const { initGlobalShortcut } = require('./global-shortcut');
+const { initEmotionEngine } = require('./emotion-engine');
 
 // GSV 语音引擎管理器（返回 getProcess / killProcess 接口）
 const sovitsMgr = initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs });
@@ -48,20 +49,11 @@ const sovitsMgr = initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, 
 // ============================================================
 app.whenReady().then(() => {
 
-    // ---- 1. 情绪雷达（可选） ----
-    const radarPath = path.join(ROOT, 'emotion_radar.py');
-    if (fs.existsSync(radarPath)) {
-        console.log("后台静默启动...");
-        radarProcess = spawn('python', [radarPath], {
-            cwd: ROOT,
-            windowsHide: true 
-        });
-        radarProcess.stdout.on('data', (data) => console.log(`[情绪雷达]: ${data.toString().trim()}`));
-        radarProcess.stderr.on('data', (data) => console.error(`[报错]: ${data.toString().trim()}`));
-        radarProcess.on('close', () => { radarProcess = null; });
-    } else {
-        console.log("未找到 emotion_radar.py");
-    }
+    // ---- 1. 情绪引擎（主进程 app/idle 检测 + IPC 推送） ----
+    const { powerMonitor } = require('electron');
+    emotionEngine = initEmotionEngine({ ipcMain, powerMonitor, getWin: () => win });
+    // 待窗口创建后启动（见下方）
+    console.log('[主进程] 情绪引擎模块已加载');
 
     // ---- 2. 创建主窗口（透明、无框、4K） ----
     win = new BrowserWindow({
@@ -82,6 +74,8 @@ app.whenReady().then(() => {
     win.once('ready-to-show', () => {
         win.maximize();
         win.show();
+        // 窗口就绪后启动情绪引擎
+        if (emotionEngine) emotionEngine.start();
     });
 
     // ---- 3. 媒体监听 Worker 线程 ----
@@ -154,15 +148,12 @@ app.whenReady().then(() => {
 
     // ---- 11. 退出时统一清理所有子进程 ----
     app.on('will-quit', () => {
+        if (emotionEngine) emotionEngine.stop();
         if (sovitsMgr.getProcess()) {
             sovitsMgr.killProcess();
         }
         if (audioCap.getProcess()) {
             audioCap.killProcess();
-        }
-        if (radarProcess) {
-            radarProcess.kill();
-            radarProcess = null;
         }
     });
 });

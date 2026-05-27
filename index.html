@@ -802,8 +802,15 @@
     <script src="renderer/background/bg-manager.js"></script>
     <!-- UI 模块 -->
     <script src="renderer/ui/radial-menu.js"></script>
+    <!-- 情绪雷达（本地检测引擎） -->
+    <script src="renderer/emotion-radar/emotion-config.js"></script>
+    <script src="renderer/emotion-radar/emotion-state.js"></script>
+    <script src="renderer/emotion-radar/detectors/apm-detector.js"></script>
+    <script src="renderer/emotion-radar/detectors/audio-detector.js"></script>
+    <script src="renderer/emotion-radar/detectors/time-detector.js"></script>
+    <script src="renderer/emotion-radar/detectors/music-detector.js"></script>
+    <script src="renderer/emotion-radar/emotion-engine.js"></script>
     <!-- 外部集成 -->
-    <script src="renderer/external/emotion-radar.js"></script>
     <script src="renderer/external/weather.js"></script>
     <!-- 音频模块 -->
     <script src="renderer/audio/visualizer.js"></script>
@@ -814,6 +821,8 @@
     <script src="renderer/system/update-notice.js"></script>
     <!-- 聊天模块 -->
     <script src="renderer/chat/ipad-chat.js"></script>
+    <!-- 情绪雷达 UI -->
+    <script src="renderer/emotion-radar/ui/emotion-panel.js"></script>
 
     <script>
         // ---- 启动保护：splash 淡出 + UI 渐显
@@ -1022,6 +1031,17 @@
         });
         // ---- PIXI 应用创建 + Live2D 状态/情绪/模型加载（已迁移至 renderer/live2d/model.js）
         // ---- 角色初始化尝试：initChar/initOutfit → loadCustomModel → BandoriIPC.send（已迁移至 renderer/live2d/model.js）
+
+        // ---- 情绪引擎自动启动（Live2D 模型加载后延迟启动，避免初始化竞态）
+        setTimeout(function () {
+            if (typeof EmotionEngine !== 'undefined' && typeof EmotionEngine.start === 'function') {
+                EmotionEngine.start();
+                console.log('[启动] 情绪引擎已自动启动');
+            }
+            if (typeof EmotionPanel !== 'undefined' && typeof EmotionPanel.show === 'function') {
+                EmotionPanel.show();
+            }
+        }, 3000);
         } catch (e) {
             console.error('[启动] 核心 IPC/State 模块初始化失败:', e);
         }
