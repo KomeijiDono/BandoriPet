@@ -327,7 +327,7 @@
         for (i = 0; i < paramIds.length; i++) {
           try {
             model.internalModel.coreModel.setParameterValueById(paramIds[i], 0);
-          } catch (e) {}
+          } catch (e) { console.warn('[character-menu] 重置模型参数失败:', paramIds[i], e.message); }
         }
       }
     }

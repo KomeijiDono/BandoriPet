@@ -204,8 +204,8 @@
       chatMemory.pop();
       var model = window.live2dPet || window.live2dModel;
       if (model) {
-        try { model.motion("cry"); model.expression("cry"); } catch (e) {}
-        setTimeout(function () { try { model.expression("default"); } catch (e) {} }, 3000);
+        try { model.motion("cry"); model.expression("cry"); } catch (e) { console.warn('[chat-api] Live2D cry 动画失败:', e.message); }
+        setTimeout(function () { try { model.expression("default"); } catch (e) { console.warn('[chat-api] Live2D 恢复默认表情失败:', e.message); } }, 3000);
       }
     }
   }

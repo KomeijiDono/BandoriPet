@@ -331,19 +331,19 @@
                         if (coreModel && isFakeSpeaking) {
                             let mouthOpen = (Math.sin(Date.now() / 80) * 0.5 + 0.5) * (Math.random() * 0.5 + 0.5);
                             
-                            try { coreModel.setParameterValueById('ParamMouthOpenY', mouthOpen); } catch(e){}
-                            try { coreModel.setParamFloat('ParamMouthOpenY', mouthOpen); } catch(e){}
+                            try { coreModel.setParameterValueById('ParamMouthOpenY', mouthOpen); } catch(e){ console.debug('[music-widget] setParameterValueById ParamMouthOpenY 失败:', e.message); }
+                            try { coreModel.setParamFloat('ParamMouthOpenY', mouthOpen); } catch(e){ console.debug('[music-widget] setParamFloat ParamMouthOpenY 失败:', e.message); }
                             
-                            try { coreModel.setParameterValueById('PARAM_MOUTH_OPEN_Y', mouthOpen); } catch(e){}
-                            try { coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthOpen); } catch(e){}
+                            try { coreModel.setParameterValueById('PARAM_MOUTH_OPEN_Y', mouthOpen); } catch(e){ console.debug('[music-widget] setParameterValueById PARAM_MOUTH_OPEN_Y 失败:', e.message); }
+                            try { coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthOpen); } catch(e){ console.debug('[music-widget] setParamFloat PARAM_MOUTH_OPEN_Y 失败:', e.message); }
                             
                             wasFakeSpeaking = true; 
                         } else if (coreModel && wasFakeSpeaking) {
-                            try { coreModel.setParameterValueById('ParamMouthOpenY', 0); } catch(e){}
-                            try { coreModel.setParamFloat('ParamMouthOpenY', 0); } catch(e){}
+                            try { coreModel.setParameterValueById('ParamMouthOpenY', 0); } catch(e){ console.debug('[music-widget] 重置 ParamMouthOpenY 失败:', e.message); }
+                            try { coreModel.setParamFloat('ParamMouthOpenY', 0); } catch(e){ console.debug('[music-widget] 重置 ParamMouthOpenY 失败:', e.message); }
                             
-                            try { coreModel.setParameterValueById('PARAM_MOUTH_OPEN_Y', 0); } catch(e){}
-                            try { coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', 0); } catch(e){}
+                            try { coreModel.setParameterValueById('PARAM_MOUTH_OPEN_Y', 0); } catch(e){ console.debug('[music-widget] 重置 PARAM_MOUTH_OPEN_Y 失败:', e.message); }
+                            try { coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', 0); } catch(e){ console.debug('[music-widget] 重置 PARAM_MOUTH_OPEN_Y 失败:', e.message); }
                             
                             wasFakeSpeaking = false; 
                         }
