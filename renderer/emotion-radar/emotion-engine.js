@@ -24,14 +24,23 @@
   var _emaState = null;        // EMA 平滑后的目标值
   var _engineTimer = null;
   var _started = false;
+  var _lastStateSnapshot = null; // 上次状态快照，用于增量更新
+  var _registeredDetectors = {}; // 已注册的检测器
 
   function init() {
     var cfg = window.EmotionConfig;
     var st = window.EmotionState;
     if (!cfg || !st) {
       console.error('[EmotionEngine] 依赖 EmotionConfig/EmotionState 未加载');
-      return;
+      return false;
     }
+
+    // 检查 AppState 是否可用
+    var hasAppState = !!window.AppState;
+    if (!hasAppState) {
+      console.warn('[EmotionEngine] AppState 未加载，部分功能将受限');
+    }
+
     _state = st.createInitialState();
     _emaState = st.createInitialState();
     for (var i = 0; i < st.DIMS.length; i++) {
@@ -40,12 +49,14 @@
     _mainEmotion = 'relaxed';
     _mainEmotionTick = 0;
 
-    // 注册 AppState 键
-    if (window.AppState) {
+    // 注册 AppState 键（仅在 AppState 可用时）
+    if (hasAppState) {
       window.AppState.register('emotionVector', _state, {});
       window.AppState.register('mainEmotion', _mainEmotion, {});
       window.AppState.register('emotionEngineRunning', false, {});
     }
+
+    return true;
   }
 
   // ---- 接收主进程系统数据 ----
@@ -56,9 +67,14 @@
   // 监听 IPC 推送
   function listenSystemIPC() {
     if (typeof window.BandoriIPC !== 'undefined') {
-      window.BandoriIPC.on('emotion-system-data', onSystemData);
+      var cfg = window.EmotionConfig;
+      var events = (cfg && cfg.events) || {};
+      var systemDataEvent = events.SYSTEM_DATA || 'emotion-system-data';
+      var musicStateEvent = events.MUSIC_STATE || 'music-state';
+
+      window.BandoriIPC.on(systemDataEvent, onSystemData);
       // 系统媒体检测作为 BGM 后备（即使没开音频采集也能检测）
-      window.BandoriIPC.on('music-state', function (data) {
+      window.BandoriIPC.on(musicStateEvent, function (data) {
         if (!data) return;
         _detectorSignals['music'] = _detectorSignals['music'] || {};
         _detectorSignals['music'].isMusicPlaying = (data.state === 'playing');
@@ -82,8 +98,15 @@
     var st = window.EmotionState;
     if (!cfg || !st) return;
 
+    // 帧率归一化：参考间隔 500ms
+    var referenceInterval = 500;
+    var frameRatio = cfg.updateInterval / referenceInterval;
+
     var decayRate = cfg.decayRate * (cfg.updateInterval / 1000);
-    var smooth = cfg.smoothingFactor;
+    // EMA 平滑系数帧率适配：adjustedFactor = 1 - (1 - factor) ^ frameRatio
+    var rawSmooth = cfg.smoothingFactor;
+    var smooth = 1 - Math.pow(1 - rawSmooth, frameRatio);
+
     var dims = st.DIMS;
     var target = {};
 
@@ -96,19 +119,19 @@
     var apm = _detectorSignals['apm'] || {};
     var apmCfg = cfg.detectors.apm;
     if (apm.apmRate > apmCfg.rageThreshold) {
-      target.rage += 12;
-      target.stressed += 8;
+      target.rage += apmCfg.rageBoost || 12;
+      target.stressed += apmCfg.stressedBoost || 8;
     } else if (apm.apmRate > apmCfg.gamingThreshold) {
-      target.gaming += 35;
-      target.focus += 10;
+      target.gaming += apmCfg.gamingBoost || 35;
+      target.focus += apmCfg.focusBoost || 10;
     } else if (apm.apmRate > 30) {
-      target.focus += 15;
+      target.focus += apmCfg.focusBoostLow || 15;
     }
     if (apm.clickRate > apmCfg.clickBurstThreshold) {
-      target.rage += 8;
+      target.rage += apmCfg.clickRageBoost || 8;
     }
     if (apm.mouseSpeed > apmCfg.mouseSpeedThreshold) {
-      target.gaming += 12;
+      target.gaming += apmCfg.mouseGamingBoost || 12;
     }
 
     // ---- 2. Audio 检测器 → （只用于音乐特征，不直接产生情绪） ----
@@ -116,54 +139,59 @@
 
     // ---- 3. Time 检测器 → sleepy（23:00=0 → 01:00=100 线性爬升） ----
     var time = _detectorSignals['time'] || {};
+    var timeCfg = cfg.detectors.time;
     if (time.isMorning) {
-      target.relaxed += 10;
+      target.relaxed += timeCfg.morningRelaxedBoost || 10;
     }
+    var nightProgress = timeCfg.nightSleepyProgress || 120;
     if (time.hour >= 23) {
-      var progress = ((time.hour - 23) * 60 + (time.minute || 0)) / 120;
+      var progress = ((time.hour - 23) * 60 + (time.minute || 0)) / nightProgress;
       target.sleepy = Math.max(target.sleepy || 0, Math.round(Math.min(1, progress) * 100));
     } else if (time.hour < 6) {
-      var progress2 = (time.hour * 60 + (time.minute || 0) + 60) / 120;
+      var progress2 = (time.hour * 60 + (time.minute || 0) + 60) / nightProgress;
       target.sleepy = Math.max(target.sleepy || 0, Math.round(Math.min(1, progress2) * 100));
     } else if (time.hour >= 21) {
-      target.sleepy = Math.max(target.sleepy || 0, 10);
+      target.sleepy = Math.max(target.sleepy || 0, timeCfg.nightSleepyBoost || 10);
     }
 
     // ---- 4. Music 检测器 → vibing / excited ----
     var music = _detectorSignals['music'] || {};
+    var musicCfg = cfg.detectors.music;
     if (music.isMusicPlaying) {
-      target.vibing = Math.max(target.vibing || 0, 40);
-      if (music.energyTrend > 0.05) {
-        target.excited = Math.max(target.excited || 0, 20);
+      target.vibing = Math.max(target.vibing || 0, musicCfg.vibingBoost || 40);
+      if (music.energyTrend > (musicCfg.energyTrendThreshold || 0.05)) {
+        target.excited = Math.max(target.excited || 0, musicCfg.excitedBoost || 20);
       }
     }
 
     // ---- 5. App 检测器 (主进程) → gaming / focus / vibing ----
     var app = _systemData.app || {};
+    var appCfg = cfg.detectors.app;
     if (app.isGaming) {
-      target.gaming = Math.max(target.gaming || 0, 50);
+      target.gaming = Math.max(target.gaming || 0, appCfg.gamingBoost || 50);
     }
     if (app.isFocus) {
-      target.focus = Math.max(target.focus || 0, 40);
+      target.focus = Math.max(target.focus || 0, appCfg.focusBoost || 40);
     }
     if (app.isMusic) {
-      target.vibing = Math.max(target.vibing || 0, 40);
+      target.vibing = Math.max(target.vibing || 0, appCfg.musicBoost || 40);
     }
 
     // ---- 6. Idle 检测器 (主进程) → lonely / sleepy ----
     var idle = _systemData.idle || {};
     var idleCfg = cfg.detectors.idle;
     if (idle.idleTime > idleCfg.sleepyThreshold) {
-      target.sleepy = Math.max(target.sleepy || 0, 20);
-      target.lonely = Math.max(target.lonely || 0, 40);
+      target.sleepy = Math.max(target.sleepy || 0, idleCfg.sleepyBoost || 20);
+      target.lonely = Math.max(target.lonely || 0, idleCfg.lonelyBoostHigh || 40);
     } else if (idle.idleTime > idleCfg.lonelyThreshold) {
-      target.lonely = Math.max(target.lonely || 0, 30);
+      target.lonely = Math.max(target.lonely || 0, idleCfg.lonelyBoostLow || 30);
     }
 
     // ---- 7. 无活动时 relaxed 缓慢上升 ----
+    var fusionCfg = cfg.fusion || {};
     var hasActivity = (apm.isActive) || (music.isMusicPlaying) || (app.isGaming || app.isFocus);
-    if (!hasActivity && idle.idleTime < 60) {
-      target.relaxed += 5;
+    if (!hasActivity && idle.idleTime < (fusionCfg.idleThreshold || 60)) {
+      target.relaxed += fusionCfg.relaxedBoost || 5;
     }
 
     // ---- 8. EMA 平滑 + 衰减 + 收敛 ----
@@ -183,7 +211,10 @@
       _state[dim] = _state[dim] * (1 - decayRate);
 
       // 向 emaState 逼近（相对拉动，稳态 = emaState）
-      var pullRate = (dim === 'relaxed') ? 0.06 : 0.12;
+      var fusionCfg = cfg.fusion || {};
+      var relaxedPull = fusionCfg.relaxedPullRate || 0.06;
+      var defaultPull = fusionCfg.defaultPullRate || 0.12;
+      var pullRate = (dim === 'relaxed') ? relaxedPull : defaultPull;
       _state[dim] = emaSmooth(_emaState[dim], _state[dim], pullRate);
 
       // 裁剪
@@ -194,11 +225,12 @@
     var bestDim = 'relaxed';
     var bestScore = _state.relaxed;
     var threshold = cfg.mainEmotionThreshold;
+    var scoreDiff = cfg.mainEmotionScoreDiff || 5;  // 从配置读取分数差值阈值
 
     for (var k = 0; k < st.PRIORITY.length; k++) {
       var d = st.PRIORITY[k];
       // 优先考虑超过阈值 + 比 relaxed 高的
-      if (_state[d] > threshold && _state[d] > bestScore - 5) {
+      if (_state[d] > threshold && _state[d] > bestScore - scoreDiff) {
         // 相同分值时按优先级选
         if (_state[d] > bestScore || st.PRIORITY.indexOf(d) < st.PRIORITY.indexOf(bestDim)) {
           bestScore = _state[d];
@@ -220,30 +252,48 @@
     }
 
     // ---- 10. 更新 AppState ----
-    if (window.AppState) {
-      window.AppState.set('emotionVector', JSON.parse(JSON.stringify(_state)));
-      window.AppState.set('mainEmotion', _mainEmotion);
+    // 优化深拷贝：仅在数据变化时才进行拷贝
+    var stateChanged = changed;
+    if (!stateChanged && _lastStateSnapshot) {
+      // 快速检查是否有任何维度变化
+      for (var s = 0; s < dims.length; s++) {
+        if (Math.abs(_state[dims[s]] - _lastStateSnapshot[dims[s]]) > 0.01) {
+          stateChanged = true;
+          break;
+        }
+      }
+    } else {
+      stateChanged = true;
     }
 
-    // ---- 11. 发射事件 ----
-    if (window.BandoriEvents) {
-      var EV = window.EVENT || {};
-      var evtUpdated = EV.EMOTION_UPDATED || 'emotion:updated';
-      var evtChanged = EV.EMOTION_CHANGED || 'emotion:changed';
+    if (stateChanged) {
+      _lastStateSnapshot = JSON.parse(JSON.stringify(_state));
 
-      window.BandoriEvents.emit(evtUpdated, {
-        vector: JSON.parse(JSON.stringify(_state)),
-        main: _mainEmotion,
-        timestamp: Date.now()
-      });
+      if (window.AppState) {
+        window.AppState.set('emotionVector', _lastStateSnapshot);
+        window.AppState.set('mainEmotion', _mainEmotion);
+      }
 
-      if (changed) {
-        window.BandoriEvents.emit(evtChanged, {
-          from: prevMain,
-          to: _mainEmotion,
-          vector: JSON.parse(JSON.stringify(_state)),
+      // ---- 11. 发射事件 ----
+      if (window.BandoriEvents) {
+        var events = cfg.events || {};
+        var evtUpdated = events.EMOTION_UPDATED || 'emotion:updated';
+        var evtChanged = events.EMOTION_CHANGED || 'emotion:changed';
+
+        window.BandoriEvents.emit(evtUpdated, {
+          vector: _lastStateSnapshot,
+          main: _mainEmotion,
           timestamp: Date.now()
         });
+
+        if (changed) {
+          window.BandoriEvents.emit(evtChanged, {
+            from: prevMain,
+            to: _mainEmotion,
+            vector: _lastStateSnapshot,
+            timestamp: Date.now()
+          });
+        }
       }
     }
 
@@ -261,24 +311,39 @@
 
   function start() {
     if (_started) return;
-    init();
+
+    // 初始化失败时中止启动
+    if (!init()) {
+      console.error('[EmotionEngine] 初始化失败，无法启动');
+      return;
+    }
 
     var cfg = window.EmotionConfig;
     var interval = (cfg && cfg.updateInterval) || 500;
 
     listenSystemIPC();
 
-    // 启动检测器
-    if (window.ApmDetector) {
+    // 启动已注册的检测器
+    for (var name in _registeredDetectors) {
+      if (_registeredDetectors.hasOwnProperty(name)) {
+        var detector = _registeredDetectors[name];
+        if (detector && typeof detector.start === 'function') {
+          detector.start(function (sig) { onDetectorSignal(name, sig); });
+        }
+      }
+    }
+
+    // 启动内置检测器（向后兼容）
+    if (window.ApmDetector && !_registeredDetectors['apm']) {
       window.ApmDetector.start(function (sig) { onDetectorSignal('apm', sig); });
     }
-    if (window.AudioDetector) {
+    if (window.AudioDetector && !_registeredDetectors['audio']) {
       window.AudioDetector.start(function (sig) { onDetectorSignal('audio', sig); });
     }
-    if (window.TimeDetector) {
+    if (window.TimeDetector && !_registeredDetectors['time']) {
       window.TimeDetector.start(function (sig) { onDetectorSignal('time', sig); });
     }
-    if (window.MusicDetector) {
+    if (window.MusicDetector && !_registeredDetectors['music']) {
       window.MusicDetector.start(function (sig) { onDetectorSignal('music', sig); });
     }
 
@@ -297,15 +362,77 @@
       clearInterval(_engineTimer);
       _engineTimer = null;
     }
-    if (window.ApmDetector) window.ApmDetector.stop();
-    if (window.AudioDetector) window.AudioDetector.stop();
-    if (window.TimeDetector) window.TimeDetector.stop();
-    if (window.MusicDetector) window.MusicDetector.stop();
+
+    // 停止已注册的检测器
+    for (var name in _registeredDetectors) {
+      if (_registeredDetectors.hasOwnProperty(name)) {
+        var detector = _registeredDetectors[name];
+        if (detector && typeof detector.stop === 'function') {
+          detector.stop();
+        }
+      }
+    }
+
+    // 停止内置检测器（向后兼容）
+    if (window.ApmDetector && !_registeredDetectors['apm']) window.ApmDetector.stop();
+    if (window.AudioDetector && !_registeredDetectors['audio']) window.AudioDetector.stop();
+    if (window.TimeDetector && !_registeredDetectors['time']) window.TimeDetector.stop();
+    if (window.MusicDetector && !_registeredDetectors['music']) window.MusicDetector.stop();
+
     _started = false;
     if (window.AppState) {
       window.AppState.set('emotionEngineRunning', false);
     }
     console.log('[EmotionEngine] 已停止');
+  }
+
+  // 注册检测器
+  function registerDetector(name, detector) {
+    if (!name || !detector) {
+      console.warn('[EmotionEngine] 注册检测器失败：名称和检测器对象不能为空');
+      return false;
+    }
+
+    // 如果检测器已存在，先停止旧的
+    if (_registeredDetectors[name]) {
+      var old = _registeredDetectors[name];
+      if (typeof old.stop === 'function') {
+        old.stop();
+      }
+    }
+
+    _registeredDetectors[name] = detector;
+
+    // 如果引擎已启动，立即启动新检测器
+    if (_started && typeof detector.start === 'function') {
+      detector.start(function (sig) { onDetectorSignal(name, sig); });
+    }
+
+    console.log('[EmotionEngine] 检测器已注册:', name);
+    return true;
+  }
+
+  // 注销检测器
+  function unregisterDetector(name) {
+    if (!_registeredDetectors[name]) {
+      return false;
+    }
+
+    var detector = _registeredDetectors[name];
+    if (typeof detector.stop === 'function') {
+      detector.stop();
+    }
+
+    delete _registeredDetectors[name];
+    delete _detectorSignals[name];
+
+    console.log('[EmotionEngine] 检测器已注销:', name);
+    return true;
+  }
+
+  // 获取已注册的检测器列表
+  function getRegisteredDetectors() {
+    return Object.keys(_registeredDetectors);
   }
 
   function getState() {
@@ -321,7 +448,10 @@
     stop: stop,
     getState: getState,
     getMainEmotion: getMainEmotion,
-    onSystemData: onSystemData
+    onSystemData: onSystemData,
+    registerDetector: registerDetector,
+    unregisterDetector: unregisterDetector,
+    getRegisteredDetectors: getRegisteredDetectors
   };
 
   console.log('[EmotionEngine] 已就绪');
