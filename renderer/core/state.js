@@ -113,6 +113,39 @@
     return JSON.parse(JSON.stringify(_state));
   }
 
+  // ---- 拖拽状态管理 ----
+
+  // 注册所有拖拽状态变量，提供统一的访问接口
+  function registerDragStates() {
+    var dragStates = [
+      'isVisDragging',      // 可视化挂件拖拽
+      'isSetDragging',      // 设置面板拖拽
+      'isDragging',         // 通用拖拽（如角色菜单）
+      'isMusicDragging',    // 音乐挂件拖拽
+      'isPhoneDragging',    // 手机 UI 拖拽
+      'isLyricDragging',    // 歌词拖拽
+      'isTxtDragging',      // 背景文字拖拽
+      'isIpadDragging',     // iPad 群聊拖拽
+      'isEmotionPanelDragging', // 情绪面板拖拽
+      'draggingModel',      // Live2D 模型拖拽
+      'modelDragMoved'      // 模型拖拽移动标记
+    ];
+
+    dragStates.forEach(function (key) {
+      register(key, false, { bridge: true });
+    });
+
+    console.log('[State] 拖拽状态变量已统一注册');
+  }
+
+  // 检查是否有任何拖拽正在进行
+  function isAnyDragging() {
+    return _state.isVisDragging || _state.isSetDragging || _state.isDragging ||
+           _state.isMusicDragging || _state.isPhoneDragging || _state.isLyricDragging ||
+           _state.isTxtDragging || _state.isIpadDragging || _state.isEmotionPanelDragging ||
+           _state.draggingModel;
+  }
+
   // ========== 暴露 API ==========
   window.AppState = {
     get: get,
@@ -122,7 +155,9 @@
     register: register,
     bridge: bridge,
     registerAll: registerAll,
-    snapshot: snapshot
+    snapshot: snapshot,
+    registerDragStates: registerDragStates,
+    isAnyDragging: isAnyDragging
   };
 
   console.log('[Renderer] state.js 已就绪');
