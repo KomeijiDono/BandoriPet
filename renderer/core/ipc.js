@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  var ipcRenderer = require('electron').ipcRenderer;
+  var electronAPI = window.electronAPI;
 
   // 已注册的监听器映射表：channel → callback[]
   var _handlers = {};
@@ -69,7 +69,7 @@
   // ============================================================
 
   function send(channel, data) {
-    ipcRenderer.send(channel, data);
+    electronAPI.send(channel, data);
   }
 
   // ============================================================
@@ -77,7 +77,7 @@
   // ============================================================
 
   function invoke(channel, data) {
-    return ipcRenderer.invoke(channel, data);
+    return electronAPI.invoke(channel, data);
   }
 
   // ============================================================
@@ -87,9 +87,8 @@
   function on(channel, callback) {
     if (!_handlers[channel]) _handlers[channel] = [];
     _handlers[channel].push(callback);
-    ipcRenderer.on(channel, function (event) {
-      // 去掉 event 参数，只传业务数据给回调
-      var args = Array.prototype.slice.call(arguments, 1);
+    electronAPI.on(channel, function () {
+      var args = Array.prototype.slice.call(arguments);
       callback.apply(null, args);
     });
   }
@@ -99,8 +98,8 @@
   // ============================================================
 
   function once(channel, callback) {
-    ipcRenderer.once(channel, function (event) {
-      var args = Array.prototype.slice.call(arguments, 1);
+    electronAPI.once(channel, function () {
+      var args = Array.prototype.slice.call(arguments);
       callback.apply(null, args);
     });
   }
@@ -113,7 +112,7 @@
     if (_handlers[channel]) {
       _handlers[channel] = _handlers[channel].filter(function (fn) { return fn !== callback; });
     }
-    ipcRenderer.removeListener(channel, callback);
+    electronAPI.off(channel, callback);
   }
 
   // ============================================================
@@ -122,7 +121,7 @@
 
   function removeAllListeners(channel) {
     _handlers[channel] = [];
-    ipcRenderer.removeAllListeners(channel);
+    electronAPI.removeAllListeners(channel);
   }
 
   // ============================================================
