@@ -60,12 +60,15 @@
 
     var bgFileName = 'character.jpg';
     try {
-      if (typeof require !== 'undefined') {
-        var fs = require('fs');
-        var path = require('path');
-        if (fs.existsSync(path.join(__dirname, 'model', charId, 'character.png'))) {
-          bgFileName = 'character.png';
-        }
+      if (window.electronAPI && window.electronAPI.fs) {
+        var fs = window.electronAPI.fs;
+        var path = window.electronAPI.path;
+        window.electronAPI.app.getAppPath().then(function(appPath) {
+          if (fs.existsSync(path.join(appPath, 'model', charId, 'character.png'))) {
+            bgFileName = 'character.png';
+            smartphoneUI.style.backgroundImage = "url('model/" + charId + "/" + bgFileName + "'), linear-gradient(135deg, #ffb6c1 0%, #87ceeb 100%)";
+          }
+        });
       }
     } catch (e) {}
     smartphoneUI.style.backgroundImage = "url('model/" + charId + "/" + bgFileName + "'), linear-gradient(135deg, #ffb6c1 0%, #87ceeb 100%)";

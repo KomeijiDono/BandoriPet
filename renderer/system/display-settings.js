@@ -5,9 +5,15 @@
 (function () {
   'use strict';
 
-  const fs = require('fs');
-  const path = require('path');
-  const configPath = path.join(require('electron').remote ? require('electron').remote.app.getAppPath() : __dirname, 'hw_config.json');
+  var fs = window.electronAPI.fs;
+  var path = window.electronAPI.path;
+  var configPath = null;
+
+  // 异步获取应用路径并初始化配置
+  window.electronAPI.app.getAppPath().then(function(appPath) {
+    configPath = path.join(appPath || '', 'hw_config.json');
+    initGPUStatus();
+  });
 
   var savedConfigPath = null;
   var savedApp = null;
@@ -19,6 +25,7 @@
 
   // 从 hw_config.json 读取 GPU 硬件加速开关状态
   function initGPUStatus() {
+    if (!configPath) return;
     let useGPU = true;
     try {
       if (fs.existsSync(configPath)) {
@@ -90,11 +97,6 @@
   window.toggleAutoStart = toggleAutoStart;
   window.triggerDisplayUpdate = triggerDisplayUpdate;
   window.initGPUStatus = initGPUStatus;
-
-  // 初始化 GPU 状态（当 DOM 就绪后）
-  document.addEventListener('DOMContentLoaded', function () {
-    initGPUStatus();
-  });
 
   console.log('[Renderer] display-settings.js 已就绪');
 })();

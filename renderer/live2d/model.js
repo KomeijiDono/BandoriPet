@@ -146,11 +146,16 @@
       var charactersConfig = window.CharactersConfig;
       var mtnFolder = charactersConfig[charId].mtnFolder;
       var relativeMtnPath = '../../_mtn_emp/' + mtnFolder + '/';
-      var absoluteMtnPath = require('path').join(__dirname, 'model', '_mtn_emp', mtnFolder);
+      var absoluteMtnPath = null;
       var autoMotions = {};
       var autoExpressions = [];
-      if (require('fs').existsSync(absoluteMtnPath)) {
-        var files = require('fs').readdirSync(absoluteMtnPath);
+
+      // 获取应用路径并检查动作文件夹
+      var appPath = await window.electronAPI.app.getAppPath();
+      absoluteMtnPath = window.electronAPI.path.join(appPath, 'model', '_mtn_emp', mtnFolder);
+
+      if (window.electronAPI.fs.existsSync(absoluteMtnPath)) {
+        var files = window.electronAPI.fs.readdirSync(absoluteMtnPath);
         files.forEach(function (file) {
           if (file.endsWith('.mtn')) {
             var actionName = file.replace(/[0-9]*\.mtn$/, '');

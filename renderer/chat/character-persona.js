@@ -5,12 +5,14 @@
 (function () {
   'use strict';
 
-  var path = require('path');
-  var fs = require('fs');
-  var app;
-  try { app = require('electron').remote.app; } catch (e) {}
-
-  var ROOT_DIR = app ? app.getAppPath() : '';
+  var path = window.electronAPI.path;
+  var fs = window.electronAPI.fs;
+  var ROOT_DIR = '';
+  var rootDirReady = window.electronAPI.app.getAppPath().then(function(appPath) {
+    ROOT_DIR = appPath || '';
+  }).catch(function(err) {
+    console.error('[character-persona] getAppPath 失败:', err);
+  });
 
   var FOLDER_TO_CHARID = {
     '奥泽美咲': 'misaki',
@@ -72,6 +74,12 @@
 
     var folderName = CHARID_TO_FOLDER[charId];
     if (!folderName) return null;
+
+    // 如果 ROOT_DIR 还没设置，返回 null
+    if (!ROOT_DIR) {
+      console.warn('[character-persona] ROOT_DIR 尚未初始化');
+      return null;
+    }
 
     var charDir = path.join(ROOT_DIR, 'characters', folderName);
     var result = null;
