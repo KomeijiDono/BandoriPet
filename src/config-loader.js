@@ -87,14 +87,14 @@ function loadConfig(rootPath) {
 
 /**
  * 获取配置值（支持点号路径）
- * @param {string} path - 配置路径，如 'physics.gravity'
+ * @param {string} keyPath - 配置路径，如 'physics.gravity'
  * @param {*} defaultValue - 默认值
  * @returns {*} 配置值
  */
-function getConfig(path, defaultValue) {
+function getConfig(keyPath, defaultValue) {
   if (!config) return defaultValue;
   
-  const keys = path.split('.');
+  const keys = keyPath.split('.');
   let value = config;
   
   for (const key of keys) {
