@@ -17,7 +17,9 @@ function registerGlobalKey(globalShortcut, win) {
         globalShortcut.register(shortcutKey, () => {
             if (win && !win.isDestroyed()) win.webContents.send('trigger-global-radial');
         });
-    } catch (err) {}
+    } catch (err) {
+        console.warn('[全局快捷键] 注册失败:', err.message);
+    }
 }
 
 // initGlobalShortcut 依赖注入：接收 ipcMain、globalShortcut、win、app
