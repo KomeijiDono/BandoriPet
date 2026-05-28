@@ -18,8 +18,8 @@ let psReady = false;
 let lastPsError = 0;
 
 // 空闲检测阈值（秒）
-const IDLE_THRESHOLD_LONELY = 300;   // 5 分钟
-const IDLE_THRESHOLD_SLEEPY = 1800;  // 30 分钟
+const IDLE_THRESHOLD_LONELY = 60;   // 1 分钟
+const IDLE_THRESHOLD_SLEEPY = 300;  // 5 分钟
 
 const currentState = {
   app: { processName: '', title: '', isGaming: false, isFocus: false, isMusic: false },
@@ -227,6 +227,19 @@ function detectIdle(powerMonitor) {
 }
 
 function initEmotionEngine({ ipcMain, powerMonitor, getWin }) {
+
+  // 提供配置给渲染进程
+  if (ipcMain) {
+    ipcMain.handle('get-emotion-config', function () {
+      return {
+        detectors: {
+          gamingProcesses: gamingList,
+          focusProcesses: focusList,
+          musicProcesses: musicList
+        }
+      };
+    });
+  }
 
   function pushToRenderer() {
     var w = getWin ? getWin() : null;
