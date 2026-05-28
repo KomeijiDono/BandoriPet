@@ -31,6 +31,22 @@
   var modelDragStartX = 0;
   var modelDragStartY = 0;
 
+  // 拖拽移动阈值（像素）
+  var DRAG_MOVE_THRESHOLD = 6;
+
+  // 确保 charactersConfig 存在的公共函数
+  function ensureCharactersConfig() {
+    if (typeof charactersConfig === 'undefined') {
+      if (window.CharactersConfig) {
+        window.charactersConfig = window.CharactersConfig;
+      } else {
+        console.error('[character-menu] charactersConfig 未定义');
+        return false;
+      }
+    }
+    return true;
+  }
+
   // 切换角色菜单显示/隐藏，带弹入弹出动画
   function toggleCharMenu() {
     var menu = document.getElementById('char-menu');
@@ -53,15 +69,7 @@
     var list = document.getElementById('char-gallery-list');
     list.innerHTML = '';
 
-    // typeof 守卫确保 charactersConfig 存在
-    if (typeof charactersConfig === 'undefined') {
-      if (window.CharactersConfig) {
-        window.charactersConfig = window.CharactersConfig;
-      } else {
-        console.error('[character-menu] charactersConfig 未定义');
-        return;
-      }
-    }
+    if (!ensureCharactersConfig()) return;
 
     var id, char, frame;
     for (id in charactersConfig) {
@@ -101,15 +109,7 @@
 
   // 打开角色详情面板，加载服装列表和各项设置参数
   function openDetailPanel(id) {
-    // typeof 守卫确保 charactersConfig 存在
-    if (typeof charactersConfig === 'undefined') {
-      if (window.CharactersConfig) {
-        window.charactersConfig = window.CharactersConfig;
-      } else {
-        console.error('[character-menu] charactersConfig 未定义');
-        return;
-      }
-    }
+    if (!ensureCharactersConfig()) return;
 
     selectedCharId = id;
     var panel = document.getElementById('char-detail-panel');
@@ -220,16 +220,7 @@
   // 保存角色菜单设置：模型参数、人设提示词、语音语言等持久化到 localStorage
   function saveMenuSettings() {
     if (!selectedCharId) return;
-
-    // typeof 守卫确保 charactersConfig 存在
-    if (typeof charactersConfig === 'undefined') {
-      if (window.CharactersConfig) {
-        window.charactersConfig = window.CharactersConfig;
-      } else {
-        console.error('[character-menu] charactersConfig 未定义');
-        return;
-      }
-    }
+    if (!ensureCharactersConfig()) return;
 
     var scale = document.getElementById('menu-set-scale').value;
     var x = document.getElementById('menu-set-x').value;
@@ -370,8 +361,8 @@
   function onDragMove() {
     if (AppState.get('draggingModel')) {
       var newPosition = dragData.getLocalPosition(this.parent);
-      if (Math.abs(newPosition.x - modelDragStartX) > 6 ||
-          Math.abs(newPosition.y - modelDragStartY) > 6) {
+      if (Math.abs(newPosition.x - modelDragStartX) > DRAG_MOVE_THRESHOLD ||
+          Math.abs(newPosition.y - modelDragStartY) > DRAG_MOVE_THRESHOLD) {
         AppState.set('modelDragMoved', true);
       }
       this.x = newPosition.x + dragOffsetX;
