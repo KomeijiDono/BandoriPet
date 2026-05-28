@@ -64,8 +64,10 @@ app.whenReady().then(() => {
         hasShadow: false,
         show: false,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js'),
+            sandbox: false,
             webSecurity: false
         }
     });
@@ -136,6 +138,14 @@ app.whenReady().then(() => {
 
     // ---- 7. 窗口控制 IPC（最小化/最大化/关闭/置顶/鼠标穿透） ----
     registerWindowControls({ ipcMain, win });
+
+    // ---- 7.5 应用信息 IPC ----
+    ipcMain.handle('get-app-path', (event, pathName) => {
+        if (pathName) {
+            return app.getPath(pathName);
+        }
+        return app.getAppPath();
+    });
 
     // ---- 8. 系统音频采集（sys_audio.exe FFT） ----
     const audioCap = initAudioCapture({ ipcMain, spawn, fs, path, __dirname, win, ROOT });
