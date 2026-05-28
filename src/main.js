@@ -15,6 +15,10 @@ const { Worker } = require('worker_threads');
 // main.js 位于 src/，项目根目录为上一级
 const ROOT = path.join(__dirname, '..');
 
+// ---- 加载配置文件 ----
+const { loadConfig, getConfig } = require('./config-loader');
+loadConfig(ROOT);
+
 // ---- GPU 硬件加速配置（hw_config.json 可选） ----
 const configPath = path.join(ROOT, 'hw_config.json');
 let useGPU = true;
