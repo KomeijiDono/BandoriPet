@@ -66,11 +66,11 @@ function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs }) {
     // 监听渲染进程的角色切换请求：先 kill 旧进程，延迟后启动新角色引擎
     ipcMain.on('switch-character', (event, charId) => {
         console.log(`\n=== 收到切人指令: 准备切换到 ${charId} ===`);
-        if (sovitsProcess) {
+        if (sovitsProcess && !sovitsProcess.killed) {
             console.log("正在关闭旧的语音引擎...");
             sovitsProcess.kill();
-            sovitsProcess = null;
         }
+        sovitsProcess = null;
         setTimeout(() => {
             startSoVITS(charId);
         }, switchDelay);
@@ -79,10 +79,10 @@ function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs }) {
     return {
         getProcess: () => sovitsProcess,
         killProcess: () => {
-            if (sovitsProcess) {
+            if (sovitsProcess && !sovitsProcess.killed) {
                 sovitsProcess.kill();
-                sovitsProcess = null;
             }
+            sovitsProcess = null;
         }
     };
 }
