@@ -94,7 +94,7 @@
   // 点击反馈，2.4秒后恢复，取消连点限制
   function playLive2DClickFeedback() {
     if (!live2dModel) return;
-    if (typeof window.modelDragMoved !== 'undefined' && window.modelDragMoved) return;
+    if (typeof AppState !== 'undefined' && AppState.get('modelDragMoved')) return;
 
     var charId = localStorage.getItem('current_char') || 'anon';
     var now = Date.now();
