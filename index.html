@@ -942,10 +942,8 @@
 
         document.addEventListener('DOMContentLoaded', initSettingsCollapsibleSections);
 
-        // ---- IPC/State 核心初始化：require → AppState.registerAll → tray-action
+        // ---- IPC/State 核心初始化：electronAPI → AppState.registerAll → tray-action
         try {
-        const { ipcRenderer } = require('electron');
-
         // ====== 状态中心初始化 ======
         AppState.registerAll({
           globalVolume:       { default: 1.0, persistKey: 'anon_volume' },
