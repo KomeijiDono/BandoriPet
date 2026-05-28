@@ -20,6 +20,8 @@
   var currentVector = null;
   var currentMain = 'relaxed';
   var _listening = false;
+  var _dirty = false;  // 脏标记，用于增量重绘
+  var _rafId = null;   // requestAnimationFrame ID
 
   function createPanel() {
     if (panelEl) return;
@@ -274,12 +276,31 @@
 
   function onEmotionUpdated(data) {
     if (!data) return;
+
+    // 标记为脏，等待下一帧重绘
+    _dirty = true;
+
+    // 暂存最新数据
     if (data.vector) {
-      updateBars(data.vector);
-      drawRadar(data.vector);
+      currentVector = data.vector;
     }
-    if (data.main && data.main !== currentMain) {
-      updateMainLabel(data.main);
+    if (data.main) {
+      currentMain = data.main;
+    }
+
+    // 使用 requestAnimationFrame 进行批量更新
+    if (!_rafId) {
+      _rafId = requestAnimationFrame(function () {
+        if (_dirty && visible) {
+          if (currentVector) {
+            updateBars(currentVector);
+            drawRadar(currentVector);
+          }
+          updateMainLabel(currentMain);
+          _dirty = false;
+        }
+        _rafId = null;
+      });
     }
   }
 
@@ -298,6 +319,13 @@
   function hide() {
     if (panelEl) panelEl.classList.add('hidden');
     visible = false;
+
+    // 取消待处理的 requestAnimationFrame
+    if (_rafId) {
+      cancelAnimationFrame(_rafId);
+      _rafId = null;
+    }
+    _dirty = false;
   }
 
   function toggle() {
