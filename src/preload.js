@@ -38,6 +38,7 @@ const INVOKE_CHANNELS = [
   'get-physics-images',
   'spawn-physics-item',
   'save-physics-image',
+  'get-emotion-config',
 ];
 
 /** main → renderer (on) */
