@@ -130,7 +130,7 @@
       header.style.cursor = 'move';
       header.addEventListener('mousedown', function (e) {
         dragging = true;
-        window.isEmotionPanelDragging = true;
+        AppState.set('isEmotionPanelDragging', true);
         offsetX = e.clientX - el.offsetLeft;
         offsetY = e.clientY - el.offsetTop;
       });
@@ -143,7 +143,7 @@
       });
       document.addEventListener('mouseup', function () {
         dragging = false;
-        window.isEmotionPanelDragging = false;
+        AppState.set('isEmotionPanelDragging', false);
       });
     }
   }

@@ -31,10 +31,6 @@
   var modelDragStartX = 0;
   var modelDragStartY = 0;
 
-  // 暴露给 window-control.js 的拖拽状态
-  window.draggingModel = false;
-  window.modelDragMoved = false;
-
   // 切换角色菜单显示/隐藏，带弹入弹出动画
   function toggleCharMenu() {
     var menu = document.getElementById('char-menu');
@@ -340,9 +336,9 @@
   // 拖拽开始：记录初始位置和偏移量（this 指向 Live2D PixiJS DisplayObject）
   function onDragStart(event) {
     dragData = event.data;
-    window.draggingModel = true;
+    AppState.set('draggingModel', true);
     var newPosition = dragData.getLocalPosition(this.parent);
-    window.modelDragMoved = false;
+    AppState.set('modelDragMoved', false);
     modelDragStartX = newPosition.x;
     modelDragStartY = newPosition.y;
     dragOffsetX = this.x - newPosition.x;
@@ -351,10 +347,10 @@
 
   // 拖拽结束：保存最终位置到 localStorage 并同步输入框
   function onDragEnd() {
-    window.draggingModel = false;
+    AppState.set('draggingModel', false);
     dragData = null;
     setTimeout(function () {
-      window.modelDragMoved = false;
+      AppState.set('modelDragMoved', false);
     }, 120);
 
     var newX = Math.round(this.x);
@@ -372,11 +368,11 @@
 
   // 拖拽中：通过 this.x/this.y 实时更新 PIXI DisplayObject 位置
   function onDragMove() {
-    if (window.draggingModel) {
+    if (AppState.get('draggingModel')) {
       var newPosition = dragData.getLocalPosition(this.parent);
       if (Math.abs(newPosition.x - modelDragStartX) > 6 ||
           Math.abs(newPosition.y - modelDragStartY) > 6) {
-        window.modelDragMoved = true;
+        AppState.set('modelDragMoved', true);
       }
       this.x = newPosition.x + dragOffsetX;
       this.y = newPosition.y + dragOffsetY;

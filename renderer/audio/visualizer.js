@@ -236,7 +236,7 @@
       onStart: function (el) { el.style.border = '1px solid rgba(255, 107, 129, 0.4)'; },
       onEnd: function (el) { el.style.border = 'none'; },
       persistX: 'vis_x', persistY: 'vis_y',
-      dragStateRef: function (v) { window.isVisDragging = v; }
+      dragStateRef: function (v) { AppState.set('isVisDragging', v); }
     });
   }
 
