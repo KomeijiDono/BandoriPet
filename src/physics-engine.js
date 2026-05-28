@@ -79,17 +79,37 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
                 if (!item.isDragging && speed < speedThreshold && angularSpeed < angularSpeedThreshold) {
                     return;
                 }
+
+                // 增量同步：仅当位置或角度变化超过阈值时才更新窗口
+                const newX = Math.round(x - item.width / 2);
+                const newY = Math.round(y - item.height / 2);
+                const newAngle = item.body.angle;
+                const posThreshold = 1; // 像素
+                const angleThreshold = 0.01; // 弧度
+
+                if (item.lastSyncedX !== undefined &&
+                    Math.abs(newX - item.lastSyncedX) < posThreshold &&
+                    Math.abs(newY - item.lastSyncedY) < posThreshold &&
+                    Math.abs(newAngle - item.lastSyncedAngle) < angleThreshold) {
+                    return;
+                }
+
+                item.lastSyncedX = newX;
+                item.lastSyncedY = newY;
+                item.lastSyncedAngle = newAngle;
+
                 try {
                     item.window.setBounds({
-                        x: Math.round(x - item.width / 2),
-                        y: Math.round(y - item.height / 2),
+                        x: newX,
+                        y: newY,
                         width: Math.round(item.width),
                         height: Math.round(item.height)
                     });
                     if (item.window.webContents) {
-                        item.window.webContents.send('sync-angle', item.body.angle);
+                        item.window.webContents.send('sync-angle', newAngle);
                     }
                 } catch (err) {
+                    console.warn('[物理引擎] 同步道具位置失败:', err.message);
                 }
             });
         }, intervalMs);
@@ -276,7 +296,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
         physicalItems.forEach(item => {
             if (!item.window.isDestroyed()) item.window.close();
         });
-        physicalItems = [];
+        physicalItems.length = 0;  // 保持引用不变，避免闭包问题
     });
 
     // ---- IPC：同步 UI 碰撞边界（渲染进程上报 UI 区域，主进程转为静态碰撞体） ----
