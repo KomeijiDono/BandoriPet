@@ -9,6 +9,7 @@
  * deps: { ipcMain, powerMonitor, getWin, spawn, ROOT } → { start, stop }
  */
 const { spawn } = require('child_process');
+const { getConfig } = require('./config-loader');
 
 let systemTimer = null;
 let psProcess = null;
@@ -21,7 +22,11 @@ const currentState = {
   idle: { idleTime: 0, isLonely: false, isSleepy: false }
 };
 
-const gamingList = [
+// 从配置文件加载进程列表
+const emotionConfig = getConfig('emotion', {});
+const detectorsConfig = emotionConfig.detectors || {};
+
+const gamingList = detectorsConfig.gamingProcesses || [
   'valorant', 'csgo', 'cs2', 'dota2', 'league of legends', 'lol',
   'genshinimpact', 'honkai', 'starrail', 'wuthering waves',
   'overwatch', 'apex', 'pubg', 'fortnite', 'minecraft',
@@ -29,7 +34,7 @@ const gamingList = [
   'battlefield', 'rainbow six', 'rocket league'
 ];
 
-const focusList = [
+const focusList = detectorsConfig.focusProcesses || [
   'code', 'vscode', 'visual studio', 'devenv', 'intellij', 'idea64',
   'webstorm', 'pycharm', 'sublime_text', 'notepad++',
   'windows terminal', 'cmd', 'powershell',
@@ -39,7 +44,7 @@ const focusList = [
   'terminal', 'cursor', 'windsurf'
 ];
 
-const musicList = [
+const musicList = detectorsConfig.musicProcesses || [
   'spotify', 'qqmusic', 'netease', 'cloudmusic', 'kwmusic',
   'foobar2000', 'aimp', 'musicbee', 'dopamine',
   'youtube music', 'apple music', 'amazon music',

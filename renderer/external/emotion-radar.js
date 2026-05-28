@@ -1,14 +1,19 @@
 /**
  * emotion-radar.js — 情绪雷达 WebSocket
- * 连接 ws://localhost:8765 监听情绪事件，触发语音播报
+ * 连接配置中的 WebSocket URL 监听情绪事件，触发语音播报
  */
 (function () {
   'use strict';
 
+  // 从配置文件加载 WebSocket URL 和重连延迟
+  var radarWsUrl = window.ConfigLoader ? window.ConfigLoader.get('external.radarWsUrl', 'ws://localhost:8765') : 'ws://localhost:8765';
+  var radarReconnectDelay = window.ConfigLoader ? window.ConfigLoader.get('external.radarReconnectDelay', 10000) : 10000;
+  var radarCooldown = window.ConfigLoader ? window.ConfigLoader.get('external.radarCooldown', 10000) : 10000;
+
   var isRadarActive = false;
 
   function connectEmotionRadar() {
-    var radarSocket = new WebSocket('ws://localhost:8765');
+    var radarSocket = new WebSocket(radarWsUrl);
     radarSocket.onopen = function () {
       console.log("情绪雷达对接成功");
     };
@@ -34,12 +39,12 @@
         setTimeout(function () {
           isRadarActive = false;
           console.log("进行下一次监听");
-        }, 10000);
+        }, radarCooldown);
       }
     };
     radarSocket.onclose = function () {
-      // WebSocket断线后10秒自动重连
-      setTimeout(connectEmotionRadar, 10000);
+      // WebSocket断线后自动重连
+      setTimeout(connectEmotionRadar, radarReconnectDelay);
     };
   }
 

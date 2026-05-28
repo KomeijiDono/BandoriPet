@@ -5,6 +5,14 @@
 (function () {
   'use strict';
 
+  // 从配置文件加载粒子默认参数
+  var defaultCount = window.ConfigLoader ? window.ConfigLoader.get('ui.particles.defaultCount', 80) : 80;
+  var defaultSpeed = window.ConfigLoader ? window.ConfigLoader.get('ui.particles.defaultSpeed', 1) : 1;
+  var defaultShape = window.ConfigLoader ? window.ConfigLoader.get('ui.particles.defaultShape', 'circle') : 'circle';
+  var defaultColor = window.ConfigLoader ? window.ConfigLoader.get('ui.particles.defaultColor', '#ffb6c1') : '#ffb6c1';
+  var sizeMin = window.ConfigLoader ? window.ConfigLoader.get('ui.particles.sizeMin', 1) : 1;
+  var sizeMax = window.ConfigLoader ? window.ConfigLoader.get('ui.particles.sizeMax', 4) : 4;
+
   var pCanvas = document.getElementById('particle-canvas');
   var pCtx = pCanvas.getContext('2d');
   var particlesArray = [];
@@ -15,12 +23,12 @@
     pCanvas.width = window.innerWidth;
     pCanvas.height = window.innerHeight;
     particlesArray = [];
-    var count = parseInt(localStorage.getItem('p_count')) || 80;
-    var baseSpeed = parseFloat(localStorage.getItem('p_speed')) || 1;
-    var shape = localStorage.getItem('p_shape') || 'circle';
-    var colorRgb = window.hexToRgb ? window.hexToRgb(localStorage.getItem('p_color') || '#ffb6c1') : '255, 182, 193';
+    var count = parseInt(localStorage.getItem('p_count')) || defaultCount;
+    var baseSpeed = parseFloat(localStorage.getItem('p_speed')) || defaultSpeed;
+    var shape = localStorage.getItem('p_shape') || defaultShape;
+    var colorRgb = window.hexToRgb ? window.hexToRgb(localStorage.getItem('p_color') || defaultColor) : '255, 182, 193';
     for (var i = 0; i < count; i++) {
-      var size = Math.random() * 3 + 1;
+      var size = Math.random() * (sizeMax - sizeMin) + sizeMin;
       var x = Math.random() * pCanvas.width;
       var y = Math.random() * pCanvas.height;
       var speedY, speedX;

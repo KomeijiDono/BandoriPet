@@ -8,7 +8,7 @@
 
   // 对话记忆（最多保留最近 20 条），挂载到 window.chatMemory 供其他模块共享
   var chatMemory = [];
-  var MAX_HISTORY = 20;
+  var MAX_HISTORY = window.ConfigLoader ? window.ConfigLoader.get('chat.maxHistory', 20) : 20;
 
   /**
    * 向手机聊天界面添加一条消息气泡
@@ -135,9 +135,10 @@
           return { role: msg.role === 'user' ? 'user' : 'assistant', content: msg.text };
         });
         openaiHistory[openaiHistory.length - 1].content += ENFORCER;
+        var temperature = window.ConfigLoader ? window.ConfigLoader.get('chat.temperature', 0.7) : 0.7;
         var response = await fetch(API_URL, {
           method: "POST", headers: { "Content-Type": "application/json", "Authorization": 'Bearer ' + API_KEY },
-          body: JSON.stringify({ model: MODEL_NAME, messages: [{ "role": "system", "content": CURRENT_PROMPT }].concat(openaiHistory), temperature: 0.7 })
+          body: JSON.stringify({ model: MODEL_NAME, messages: [{ "role": "system", "content": CURRENT_PROMPT }].concat(openaiHistory), temperature: temperature })
         });
         var data = await response.json();
         if (data.error) throw new Error(data.error.message);

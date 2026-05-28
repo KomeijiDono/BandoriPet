@@ -5,12 +5,17 @@
 (function () {
   'use strict';
 
+  // 从配置文件加载天气 API URL
+  var geoApiUrl = window.ConfigLoader ? window.ConfigLoader.get('external.geoApiUrl', 'https://get.geojs.io/v1/ip/geo.json') : 'https://get.geojs.io/v1/ip/geo.json';
+  var weatherApiUrl = window.ConfigLoader ? window.ConfigLoader.get('external.weatherApiUrl', 'https://api.open-meteo.com/v1/forecast') : 'https://api.open-meteo.com/v1/forecast';
+  var weatherInterval = window.ConfigLoader ? window.ConfigLoader.get('external.weatherInterval', 3600000) : 3600000;
+
   // 通过IP地理定位获取经纬度 → 调用Open-Meteo免费天气API → 渲染天气信息
   async function fetchWeather() {
     var weatherEl = document.getElementById('weather-text');
     if (!weatherEl) return;
     try {
-      var ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
+      var ipRes = await fetch(geoApiUrl);
       if (!ipRes.ok) throw new Error("IP请求失败");
       var ipData = await ipRes.json();
 
@@ -23,7 +28,7 @@
         return;
       }
 
-      var weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + latitude + '&longitude=' + longitude + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m');
+      var weatherRes = await fetch(weatherApiUrl + '?latitude=' + latitude + '&longitude=' + longitude + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m');
       var weatherData = await weatherRes.json();
 
       var temp = weatherData.current.temperature_2m;
@@ -72,7 +77,7 @@
   }
 
   fetchWeather();
-  setInterval(fetchWeather, 3600000);
+  setInterval(fetchWeather, weatherInterval);
 
   window.fetchWeather = fetchWeather;
 

@@ -1,9 +1,16 @@
 // GPT-SoVITS 语音引擎生命周期管理器：负责 spawn/kill Python 子进程，处理角色切换
+const { getConfig } = require('./config-loader');
+
 let sovitsProcess = null;
 
 // 初始化 SoVITS 管理器，注入依赖：path, spawn, ipcMain, voiceConfigs
 // 返回 { getProcess, killProcess } 供外部控制进程生命周期
 function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs }) {
+    // 从配置文件加载 SoVITS 参数
+    const sovitsConfig = getConfig('sovits', {});
+    const language = sovitsConfig.language || 'ja';
+    const switchDelay = sovitsConfig.switchDelay || 1000;
+
     // 根据角色 ID 启动对应语音引擎：查找配置 → 拼接 Python 路径 → spawn 子进程
     function startSoVITS(charId) {
         const config = voiceConfigs[charId];
@@ -21,7 +28,7 @@ function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs }) {
             '-g', config.ckpt,
             '-dr', config.refAudio,
             '-dt', config.refText,
-            '-dl', 'ja' 
+            '-dl', language
         ];
         
         try {
@@ -56,7 +63,7 @@ function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs }) {
         }
     }
 
-    // 监听渲染进程的角色切换请求：先 kill 旧进程，延迟 1 秒后启动新角色引擎
+    // 监听渲染进程的角色切换请求：先 kill 旧进程，延迟后启动新角色引擎
     ipcMain.on('switch-character', (event, charId) => {
         console.log(`\n=== 收到切人指令: 准备切换到 ${charId} ===`);
         if (sovitsProcess) {
@@ -66,7 +73,7 @@ function initSoVITSManager({ path, spawn, ipcMain, voiceConfigs, ROOT, fs }) {
         }
         setTimeout(() => {
             startSoVITS(charId);
-        }, 1000);
+        }, switchDelay);
     });
 
     return {

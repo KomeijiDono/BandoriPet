@@ -72,9 +72,13 @@
   // 启动语音情绪动作序列：根据音频长度分配各情绪标签的播放时间
   function startVoiceEmotionActions(tags, charId, audio) {
     clearVoiceEmotionTimers();
-    var sequence = (Array.isArray(tags) && tags.length > 0 ? tags : ['normal']).slice(0, 3);
+    var maxEmotionTags = window.ConfigLoader ? window.ConfigLoader.get('chat.maxEmotionTags', 3) : 3;
+    var sequence = (Array.isArray(tags) && tags.length > 0 ? tags : ['normal']).slice(0, maxEmotionTags);
     var durationMs = audio && Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration * 1000 : 0;
-    var stepMs = durationMs > 0 ? Math.max(1500, Math.min(3500, durationMs / (sequence.length + 1))) : 2600;
+    var stepMin = window.ConfigLoader ? window.ConfigLoader.get('chat.voiceEmotionStepMin', 1500) : 1500;
+    var stepMax = window.ConfigLoader ? window.ConfigLoader.get('chat.voiceEmotionStepMax', 3500) : 3500;
+    var stepDefault = window.ConfigLoader ? window.ConfigLoader.get('chat.voiceEmotionStepDefault', 2600) : 2600;
+    var stepMs = durationMs > 0 ? Math.max(stepMin, Math.min(stepMax, durationMs / (sequence.length + 1))) : stepDefault;
     sequence.forEach(function (tag, index) {
       var delay = index === 0 ? 0 : Math.round(stepMs * index);
       if (delay === 0) applyLive2DEmotion(tag, charId);
@@ -112,7 +116,8 @@
       applyLive2DEmotion('touch', charId);
     }
     clearVoiceEmotionTimers();
-    voiceEmotionTimers.push(setTimeout(function () { restoreLive2DNeutral(charId); }, 2400));
+    var clickFeedbackDuration = window.ConfigLoader ? window.ConfigLoader.get('chat.clickFeedbackDuration', 2400) : 2400;
+    voiceEmotionTimers.push(setTimeout(function () { restoreLive2DNeutral(charId); }, clickFeedbackDuration));
   }
 
   // 绑定 Live2D 模型点击交互事件

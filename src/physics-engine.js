@@ -5,6 +5,7 @@
 // ============================================================================
 const Matter = require('matter-js');
 const { Engine, World, Bodies } = Matter;
+const { getConfig } = require('./config-loader');
 
 // initPhysics 依赖注入：接收 BrowserWindow、IPC、screen、fs、path 等主进程模块
 function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win, ROOT }) {
@@ -14,16 +15,19 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
         fs.mkdirSync(physicsItemsDir, { recursive: true });
     }
 
+    // ---- 从配置文件加载物理参数 ----
+    const physicsConfig = getConfig('physics', {});
+
     // ---- 物理引擎和世界初始化 ----
     const engine = Engine.create();
     const world = engine.world;
-    engine.gravity.y = 1.5;  // Y 轴重力（向下）
+    engine.gravity.y = physicsConfig.gravity || 1.5;  // Y 轴重力（向下）
 
     // ---- 状态变量 ----
     let physicalItems = [];        // 所有物理道具的引用数组
     let physicsTimer = null;       // 物理循环定时器
-    let throwPowerMultiplier = 1.2; // 投掷力度倍率
-    let globalFrictionAir = 0.01;  // 全局空气阻力
+    let throwPowerMultiplier = physicsConfig.throwPower || 1.2; // 投掷力度倍率
+    let globalFrictionAir = physicsConfig.airFriction || 0.01;  // 全局空气阻力
 
     // ---- 拖拽状态 ----
     let draggingItemId = null;       // 当前拖拽中的道具 ID
@@ -34,6 +38,10 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
     function startPhysicsLoop(fps) {
         if (physicsTimer) clearInterval(physicsTimer);
         const intervalMs = 1000 / fps;
+        const dragVelocityFactor = physicsConfig.dragVelocityFactor || 0.4;
+        const bounds = physicsConfig.bounds || { yMin: -5000, yMax: 5000, xMin: -5000, xMax: 10000 };
+        const speedThreshold = physicsConfig.speedThreshold || 0.1;
+        const angularSpeedThreshold = physicsConfig.angularSpeedThreshold || 0.01;
 
         physicsTimer = setInterval(() => {
             Engine.update(engine, intervalMs);
@@ -47,8 +55,8 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
                     const targetY = cursor.y + dragOffset.y;
 
                     dragVelocity = {
-                        x: (targetX - item.body.position.x) * 0.4,
-                        y: (targetY - item.body.position.y) * 0.4
+                        x: (targetX - item.body.position.x) * dragVelocityFactor,
+                        y: (targetY - item.body.position.y) * dragVelocityFactor
                     };
 
                     Matter.Body.setPosition(item.body, { x: targetX, y: targetY });
@@ -61,14 +69,14 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
                 if (!item.window || item.window.isDestroyed()) return;
                 const { x, y } = item.body.position;
 
-                if (Number.isNaN(x) || Number.isNaN(y) || y > 5000 || y < -5000 || x > 10000 || x < -5000) {
+                if (Number.isNaN(x) || Number.isNaN(y) || y > bounds.yMax || y < bounds.yMin || x > bounds.xMax || x < bounds.xMin) {
                     item.window.close();
                     return;
                 }
                 // 速度/角速度过低时跳过同步，节省性能
                 const speed = Matter.Vector.magnitude(item.body.velocity);
                 const angularSpeed = Math.abs(item.body.angularVelocity);
-                if (!item.isDragging && speed < 0.1 && angularSpeed < 0.01) {
+                if (!item.isDragging && speed < speedThreshold && angularSpeed < angularSpeedThreshold) {
                     return;
                 }
                 try {
@@ -86,7 +94,7 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
             });
         }, intervalMs);
     }
-    startPhysicsLoop(60);
+    startPhysicsLoop(physicsConfig.fps || 60);
 
     // ---- 物理墙壁：地面、左墙、右墙、天花板 ----
     {
@@ -225,11 +233,21 @@ function initPhysics({ BrowserWindow, ipcMain, screen, fs, path, __dirname, win,
 
     // ---- IPC：更新物理参数（重力 / FPS / 投掷力度 / 空气阻力） ----
     ipcMain.on('update-physics-params', (event, params) => {
-        if (params.gravity !== undefined) engine.gravity.y = params.gravity;
-        if (params.fps !== undefined) startPhysicsLoop(params.fps);
-        if (params.throwPower !== undefined) throwPowerMultiplier = params.throwPower;
+        if (params.gravity !== undefined) {
+            engine.gravity.y = params.gravity;
+            physicsConfig.gravity = params.gravity;
+        }
+        if (params.fps !== undefined) {
+            startPhysicsLoop(params.fps);
+            physicsConfig.fps = params.fps;
+        }
+        if (params.throwPower !== undefined) {
+            throwPowerMultiplier = params.throwPower;
+            physicsConfig.throwPower = params.throwPower;
+        }
         if (params.frictionAir !== undefined) {
             globalFrictionAir = params.frictionAir;
+            physicsConfig.airFriction = params.frictionAir;
             physicalItems.forEach(item => {
                 item.body.frictionAir = globalFrictionAir;
             });
