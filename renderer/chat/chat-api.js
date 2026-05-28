@@ -64,28 +64,12 @@
     var text = inputElement.value.trim();
     if (!text) return;
 
-    // === 多 API 默认配置 ===
-    var defaultApiConfigs = {
-      "deepseek": { url: "https://api.deepseek.com/v1/chat/completions", key: "", model: "deepseek-chat" },
-      "gemini":   { url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=", key: "", model: "gemini-3.1-flash-lite" },
-      "openai":   { url: "https://api.openai.com/v1/chat/completions", key: "", model: "gpt-5.4-2026-03-05" },
-      "qwen":     { url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", key: "", model: "qwen3.6-max-preview" }
-    };
-
-    // === 从 localStorage 获取用户自定义配置 ===
-    var apiConfigs = JSON.parse(localStorage.getItem('api_configs')) || defaultApiConfigs;
-    // 补全由于版本升级或未配置导致的默认值
-    for (var k in defaultApiConfigs) {
-      if (!apiConfigs[k]) {
-        apiConfigs[k] = Object.assign({}, defaultApiConfigs[k]);
-      }
-    }
-
-    // === 根据 localStorage 选择活跃 API、角色、System Prompt ===
+    // === 使用统一的 API 配置 ===
+    var apiConfigs = window.APIConfig.getUserConfigs();
     var activeAPI = localStorage.getItem('api_preset') || "deepseek";
-    var API_URL = apiConfigs[activeAPI] ? apiConfigs[activeAPI].url : defaultApiConfigs[activeAPI].url;
-    var API_KEY = apiConfigs[activeAPI] ? apiConfigs[activeAPI].key : defaultApiConfigs[activeAPI].key;
-    var MODEL_NAME = apiConfigs[activeAPI] ? apiConfigs[activeAPI].model : defaultApiConfigs[activeAPI].model;
+    var API_URL = apiConfigs[activeAPI] ? apiConfigs[activeAPI].url : '';
+    var API_KEY = apiConfigs[activeAPI] ? apiConfigs[activeAPI].key : '';
+    var MODEL_NAME = apiConfigs[activeAPI] ? apiConfigs[activeAPI].model : '';
     var charId = localStorage.getItem('current_char') || 'anon';
     var charactersConfig = window.CharactersConfig;
     var CURRENT_PROMPT = localStorage.getItem('prompt_' + charId) || (charactersConfig && charactersConfig[charId] ? charactersConfig[charId].prompt : '');

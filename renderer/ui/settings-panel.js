@@ -5,12 +5,6 @@
 (function () {
   'use strict';
 
-  var defaultApiConfigs = {
-    "deepseek": { url: "https://api.deepseek.com/v1/chat/completions", key: "", model: "deepseek-chat" },
-    "gemini":   { url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=", key: "", model: "gemini-3.1-flash-lite" },
-    "openai":   { url: "https://api.openai.com/v1/chat/completions", key: "", model: "gpt-5.4-2026-03-05" },
-    "qwen":     { url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", key: "", model: "qwen3.6-max-preview" }
-  };
   var currentApiConfigs = {};
   var activePreset = 'deepseek';
 
@@ -31,13 +25,7 @@
       document.getElementById('api-preset').value = activePreset;
 
       // 加载 API 持久化配置
-      currentApiConfigs = JSON.parse(localStorage.getItem('api_configs')) || {};
-      // 补全由于版本升级或未配置导致的默认值
-      for (var k in defaultApiConfigs) {
-        if (!currentApiConfigs[k]) {
-          currentApiConfigs[k] = Object.assign({}, defaultApiConfigs[k]);
-        }
-      }
+      currentApiConfigs = window.APIConfig.getUserConfigs();
       var config = currentApiConfigs[activePreset] || { url: '', key: '', model: '' };
       document.getElementById('api-url').value = config.url || '';
       document.getElementById('api-key').value = config.key || '';
@@ -71,15 +59,13 @@
     localStorage.setItem('phone_w', phoneW);
     localStorage.setItem('phone_h', phoneH);
     localStorage.setItem('phone_scale', phoneScale);
-    localStorage.setItem('api_preset', apiPreset);
 
     // 保存当前输入框的 API 配置
-    currentApiConfigs[apiPreset] = {
+    window.APIConfig.saveUserConfig(apiPreset, {
       url: document.getElementById('api-url').value.trim(),
       key: document.getElementById('api-key').value.trim(),
       model: document.getElementById('api-model').value.trim()
-    };
-    localStorage.setItem('api_configs', JSON.stringify(currentApiConfigs));
+    });
 
     toggleSettings();
     if (typeof addChatMessage === 'function') addChatMessage("控制台设置应用并保存好啦！", 'ai');
@@ -375,7 +361,7 @@
     var header = document.getElementById('settings-header');
     if (panel && header) {
       if (typeof initDraggable === 'function') {
-        initDraggable(header, panel, { onStart: function (el) { el.style.border = '2px solid #ff6b81'; window.isSetDragging = true; }, onEnd: function (el) { el.style.border = '2px solid #ffb6c1'; window.isSetDragging = false; } });
+        initDraggable(header, panel, { onStart: function (el) { el.style.border = '2px solid #ff6b81'; AppState.set('isSetDragging', true); }, onEnd: function (el) { el.style.border = '2px solid #ffb6c1'; AppState.set('isSetDragging', false); } });
       }
     }
   }, 100);
