@@ -15,6 +15,25 @@
   var tickTimer = null;
   var onUpdate = null;
 
+  // 具名事件处理函数（用于正确移除监听器）
+  function handleKeydown() {
+    keyPressCount++;
+  }
+
+  function handleMousedown() {
+    clickCount++;
+  }
+
+  function handleMousemove(e) {
+    if (lastMouseX !== 0 || lastMouseY !== 0) {
+      var dx = e.clientX - lastMouseX;
+      var dy = e.clientY - lastMouseY;
+      mouseDist += Math.sqrt(dx * dx + dy * dy);
+    }
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  }
+
   function reset() {
     keyPressCount = 0;
     clickCount = 0;
@@ -49,23 +68,10 @@
 
     onUpdate = callback;
 
-    document.addEventListener('keydown', function () {
-      keyPressCount++;
-    });
-
-    document.addEventListener('mousedown', function () {
-      clickCount++;
-    });
-
-    document.addEventListener('mousemove', function (e) {
-      if (lastMouseX !== 0 || lastMouseY !== 0) {
-        var dx = e.clientX - lastMouseX;
-        var dy = e.clientY - lastMouseY;
-        mouseDist += Math.sqrt(dx * dx + dy * dy);
-      }
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
-    });
+    // 使用具名函数注册事件监听器
+    document.addEventListener('keydown', handleKeydown);
+    document.addEventListener('mousedown', handleMousedown);
+    document.addEventListener('mousemove', handleMousemove);
 
     tickTimer = setInterval(tick, 500);
   }
@@ -75,6 +81,12 @@
       clearInterval(tickTimer);
       tickTimer = null;
     }
+
+    // 移除事件监听器，防止内存泄漏
+    document.removeEventListener('keydown', handleKeydown);
+    document.removeEventListener('mousedown', handleMousedown);
+    document.removeEventListener('mousemove', handleMousemove);
+
     onUpdate = null;
   }
 
