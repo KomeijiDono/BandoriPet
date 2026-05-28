@@ -1,0 +1,132 @@
+{
+  "physics": {
+    "gravity": 1.5,
+    "throwPower": 1.2,
+    "airFriction": 0.01,
+    "fps": 60,
+    "bounds": {
+      "yMin": -5000,
+      "yMax": 5000,
+      "xMin": -5000,
+      "xMax": 10000
+    },
+    "dragVelocityFactor": 0.4,
+    "speedThreshold": 0.1,
+    "angularSpeedThreshold": 0.01,
+    "defaultItemSize": 80,
+    "minItemSize": 30,
+    "maxItemSize": 300
+  },
+  "emotion": {
+    "detectors": {
+      "gamingProcesses": [
+        "valorant", "csgo", "cs2", "dota2", "league of legends", "lol",
+        "genshinimpact", "honkai", "starrail", "wuthering waves",
+        "overwatch", "apex", "pubg", "fortnite", "minecraft",
+        "elden ring", "monster hunter", "call of duty", "steam",
+        "battlefield", "rainbow six", "rocket league"
+      ],
+      "focusProcesses": [
+        "code", "vscode", "visual studio", "devenv", "intellij", "idea64",
+        "webstorm", "pycharm", "sublime_text", "notepad++",
+        "windows terminal", "cmd", "powershell",
+        "chrome", "firefox", "msedge", "obsidian", "notion",
+        "figma", "photoshop", "blender", "unity", "unreal",
+        "winword", "excel", "powerpnt", "outlook",
+        "terminal", "cursor", "windsurf"
+      ],
+      "musicProcesses": [
+        "spotify", "qqmusic", "netease", "cloudmusic", "kwmusic",
+        "foobar2000", "aimp", "musicbee", "dopamine",
+        "youtube music", "apple music", "amazon music",
+        "tidal", "deezer", "soundcloud"
+      ]
+    },
+    "updateInterval": 500,
+    "decayRate": 0.015,
+    "smoothingFactor": 0.25,
+    "mainEmotionThreshold": 20,
+    "changeHysteresis": 3
+  },
+  "ui": {
+    "phone": {
+      "width": 320,
+      "height": 500,
+      "scale": 1.0,
+      "defaultX": "40px",
+      "defaultY": "50px"
+    },
+    "widget": {
+      "defaultX": "20px",
+      "defaultY": "55px"
+    },
+    "animation": {
+      "fadeOut": 200,
+      "popIn": 400,
+      "restoreDefault": 3000,
+      "settingsSave": 3000
+    },
+    "colors": {
+      "time": "#ff6b81",
+      "date": "#555555",
+      "greeting": "#777777",
+      "weather": "#5aa1e3",
+      "defaultRgb": "255, 182, 193",
+      "gradientStart": "#ffb6c1",
+      "gradientEnd": "#87ceeb"
+    },
+    "particles": {
+      "defaultCount": 80,
+      "defaultSpeed": 1,
+      "defaultShape": "circle",
+      "defaultColor": "#ffb6c1",
+      "sizeMin": 1,
+      "sizeMax": 4,
+      "starPoints": 5
+    },
+    "mouseTrail": {
+      "spawnProbability": 0.4,
+      "dynamicHueStep": 0.5
+    },
+    "radialMenu": {
+      "radius": 95,
+      "itemSize": 54,
+      "defaultKey": "`",
+      "defaultMode": "click"
+    }
+  },
+  "chat": {
+    "maxHistory": 20,
+    "temperature": 0.7,
+    "maxEmotionTags": 3,
+    "voiceEmotionStepMin": 1500,
+    "voiceEmotionStepMax": 3500,
+    "voiceEmotionStepDefault": 2600,
+    "clickFeedbackDuration": 2400,
+    "emotionRestoreDelay": 3000
+  },
+  "external": {
+    "weatherInterval": 3600000,
+    "weatherApiUrl": "https://api.open-meteo.com/v1/forecast",
+    "geoApiUrl": "https://get.geojs.io/v1/ip/geo.json",
+    "radarWsUrl": "ws://localhost:8765",
+    "radarReconnectDelay": 10000,
+    "radarCooldown": 10000
+  },
+  "sovits": {
+    "language": "ja",
+    "switchDelay": 1000
+  },
+  "audio": {
+    "fftSize": 64,
+    "lerpFactor": 0.18,
+    "dynamicHueStep": 0.5,
+    "defaultBarCount": 60,
+    "maxBoost": 300
+  },
+  "visualizer": {
+    "defaultStyle": "bar",
+    "defaultAmp": 100,
+    "defaultCount": 60
+  }
+}
