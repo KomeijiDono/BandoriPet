@@ -17,6 +17,10 @@ let psBuffer = '';
 let psReady = false;
 let lastPsError = 0;
 
+// 空闲检测阈值（秒）
+const IDLE_THRESHOLD_LONELY = 300;   // 5 分钟
+const IDLE_THRESHOLD_SLEEPY = 1800;  // 30 分钟
+
 const currentState = {
   app: { processName: '', title: '', isGaming: false, isFocus: false, isMusic: false },
   idle: { idleTime: 0, isLonely: false, isSleepy: false }
@@ -153,7 +157,9 @@ function startPsProcess() {
 
 function killPsProcess() {
   if (psProcess) {
-    try { psProcess.kill(); } catch (e) {}
+    try { psProcess.kill(); } catch (e) {
+      console.warn('[情绪引擎] 终止 PowerShell 进程失败:', e.message);
+    }
     psProcess = null;
   }
   psReady = false;
@@ -212,8 +218,8 @@ function detectIdle(powerMonitor) {
     var idleSeconds = powerMonitor.getSystemIdleTime();
     currentState.idle = {
       idleTime: idleSeconds,
-      isLonely: idleSeconds > 300,
-      isSleepy: idleSeconds > 1800
+      isLonely: idleSeconds > IDLE_THRESHOLD_LONELY,
+      isSleepy: idleSeconds > IDLE_THRESHOLD_SLEEPY
     };
   } catch (e) {
     currentState.idle = { idleTime: 0, isLonely: false, isSleepy: false };
@@ -226,10 +232,20 @@ function initEmotionEngine({ ipcMain, powerMonitor, getWin }) {
     var w = getWin ? getWin() : null;
     if (w && !w.isDestroyed()) {
       try {
-        w.webContents.send('emotion-system-data', JSON.parse(JSON.stringify(currentState)));
-      } catch (e) {}
+        // 增量推送：仅在数据变化时才发送
+        var newState = JSON.parse(JSON.stringify(currentState));
+        if (JSON.stringify(newState) !== JSON.stringify(lastPushedState)) {
+          w.webContents.send('emotion-system-data', newState);
+          lastPushedState = newState;
+        }
+      } catch (e) {
+        console.warn('[情绪引擎] 推送数据到渲染进程失败:', e.message);
+      }
     }
   }
+
+  // 上次推送的状态，用于增量推送
+  var lastPushedState = null;
 
   function start() {
     if (systemTimer) return;
@@ -239,11 +255,12 @@ function initEmotionEngine({ ipcMain, powerMonitor, getWin }) {
     if (powerMonitor) detectIdle(powerMonitor);
     pushToRenderer();
 
+    // 轮询频率改为 3 秒
     systemTimer = setInterval(function () {
       pollApp();
       if (powerMonitor) detectIdle(powerMonitor);
       pushToRenderer();
-    }, 1000);
+    }, 3000);
 
     console.log('[主进程-情绪] 引擎已启动');
   }
