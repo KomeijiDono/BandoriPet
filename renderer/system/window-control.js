@@ -52,6 +52,9 @@
 
   // ========== 鼠标穿透 ==========
   var lastIgnoreState = false;
+  var mouseX = 0;
+  var mouseY = 0;
+  var rafId = null;
 
   // 初始化：从localStorage恢复穿透/标题栏/置顶三项状态
   function initMousePassthrough() {
@@ -80,60 +83,72 @@
         window.BandoriIPC.send('set-always-on-top', true);
       }
     }
+
+    // 启动鼠标穿透检测循环
+    startPassthroughLoop();
   }
 
-  // 鼠标穿透核心逻辑：60fps轮询所有拖拽状态变量，任一拖拽中则禁用穿透
-  // 仅当鼠标在纯背景元素（canvas/粒子/背景层）上且不在Live2D模型区域时，才允许穿透
-  document.addEventListener('mousemove', function (e) {
-    var enablePassthrough = document.getElementById('s-passthrough') && document.getElementById('s-passthrough').checked;
-    if (!enablePassthrough) {// 穿透关闭时确保恢复鼠标响应
-      if (lastIgnoreState !== false) {
-        lastIgnoreState = false;
-        window.BandoriIPC.send('set-ignore-mouse', false);
+  // 鼠标穿透检测循环：使用 requestAnimationFrame 优化性能
+  function startPassthroughLoop() {
+    // 监听鼠标位置更新
+    document.addEventListener('mousemove', function (e) {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    // 使用 requestAnimationFrame 进行穿透检测
+    function checkPassthrough() {
+      var enablePassthrough = document.getElementById('s-passthrough') && document.getElementById('s-passthrough').checked;
+      if (!enablePassthrough) {
+        // 穿透关闭时确保恢复鼠标响应
+        if (lastIgnoreState !== false) {
+          lastIgnoreState = false;
+          window.BandoriIPC.send('set-ignore-mouse', false);
+        }
+        rafId = requestAnimationFrame(checkPassthrough);
+        return;
       }
-      return;
-    }
 
-    var shouldIgnore = true;
+      var shouldIgnore = true;
 
-    // 检测所有拖拽状态变量：任一为true则禁止穿透
-    if ((typeof isVisDragging !== 'undefined' && isVisDragging) ||
-        (typeof isSetDragging !== 'undefined' && isSetDragging) ||
-        (typeof isDragging !== 'undefined' && isDragging) ||
-        (typeof isMusicDragging !== 'undefined' && isMusicDragging) ||
-        (typeof isPhoneDragging !== 'undefined' && isPhoneDragging) ||
-        (typeof isLyricDragging !== 'undefined' && isLyricDragging) ||
-        (typeof isTxtDragging !== 'undefined' && isTxtDragging) ||
-        (typeof isIpadDragging !== 'undefined' && isIpadDragging) ||
-        (typeof draggingModel !== 'undefined' && draggingModel)) {
-      shouldIgnore = false;
-    }
-
-    var transparentBgIds = ['canvas', 'app-background', 'bg-layer-gradient', 'bg-layer-pattern', 'bg-layer-lines', 'particle-canvas', 'bg-text-layer'];
-
-    if (shouldIgnore && e.target && e.target.tagName !== 'HTML' && e.target.tagName !== 'BODY') {
-      if (!e.target.id || !transparentBgIds.includes(e.target.id)) {
+      // 使用统一的拖拽状态检测：任一拖拽中则禁止穿透
+      if (typeof AppState !== 'undefined' && AppState.isAnyDragging()) {
         shouldIgnore = false;
       }
-    }
 
-    if (shouldIgnore && window.live2dPet) {
-      var dragEnabled = localStorage.getItem('model_drag_enabled') === 'true';
-      if (dragEnabled) {
-        var bounds = window.live2dPet.getBounds();
-        var padding = 20;
-        if (e.clientX >= (bounds.x - padding) && e.clientX <= (bounds.x + bounds.width + padding) &&
-            e.clientY >= (bounds.y - padding) && e.clientY <= (bounds.y + bounds.height + padding)) {
+      var transparentBgIds = ['canvas', 'app-background', 'bg-layer-gradient', 'bg-layer-pattern', 'bg-layer-lines', 'particle-canvas', 'bg-text-layer'];
+
+      // 获取鼠标下方的元素
+      var elementBelow = document.elementFromPoint(mouseX, mouseY);
+      if (shouldIgnore && elementBelow && elementBelow.tagName !== 'HTML' && elementBelow.tagName !== 'BODY') {
+        if (!elementBelow.id || !transparentBgIds.includes(elementBelow.id)) {
           shouldIgnore = false;
         }
       }
+
+      if (shouldIgnore && window.live2dPet) {
+        var dragEnabled = localStorage.getItem('model_drag_enabled') === 'true';
+        if (dragEnabled) {
+          var bounds = window.live2dPet.getBounds();
+          var padding = 20;
+          if (mouseX >= (bounds.x - padding) && mouseX <= (bounds.x + bounds.width + padding) &&
+              mouseY >= (bounds.y - padding) && mouseY <= (bounds.y + bounds.height + padding)) {
+            shouldIgnore = false;
+          }
+        }
+      }
+
+      if (lastIgnoreState !== shouldIgnore) {
+        lastIgnoreState = shouldIgnore;
+        window.BandoriIPC.send('set-ignore-mouse', shouldIgnore);
+      }
+
+      rafId = requestAnimationFrame(checkPassthrough);
     }
 
-    if (lastIgnoreState !== shouldIgnore) {
-      lastIgnoreState = shouldIgnore;
-      window.BandoriIPC.send('set-ignore-mouse', shouldIgnore);
-    }
-  });
+    // 启动检测循环
+    rafId = requestAnimationFrame(checkPassthrough);
+  }
 
   // ========== 暴露到全局 ==========
   window.minWindow = minWindow;
